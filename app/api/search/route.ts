@@ -6,14 +6,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Maps filter buttons to keyword lists for matching product names
+// Keep in sync with app/api/dupes/route.ts CATEGORY_KEYWORDS
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  moisturizer: ["moisturizer", "moisturizing", "moisturising", "hydrating lotion", "hydrating cream", "daily lotion", "facial lotion", "body lotion", "emollient", "barrier cream", "barrier repair"],
-  cleanser: ["cleanser", "cleansing", "face wash", "facial wash", "foaming wash", "gel wash", "micellar", "cleanse", "makeup remover"],
-  serum: ["serum", "concentrate", "ampoule", "booster"],
-  toner: ["toner", "toning", "balancing mist", "facial mist"],
-  sunscreen: ["sunscreen", "spf", "sun protection", "broad spectrum", "sunblock", "uv shield"],
-  eye: ["eye cream", "eye gel", "eye serum", "eye contour", "under eye", "undereye"],
+  moisturizer: ["moisturizer", "moisturising", "moisturizing", "cream", "lotion", "hydrating", "hydration", "hydro", "gel cream", "daily face", "face oil", "facial oil", "balm", "butter"],
+  cleanser: ["cleanser", "cleansing", "face wash", "facial wash", "foaming wash", "gel wash", "micellar", "cleanse", "makeup remover", "scrub"],
+  serum: ["serum", "essence", "ampoule", "booster", "concentrate", "drops"],
+  toner: ["toner", "toning", "mist", "prep", "softener"],
+  sunscreen: ["sunscreen", "spf", "sun protection", "sunblock", "broad spectrum"],
+  eye: ["eye cream", "eye gel", "eye serum", "eye treatment", "eye"],
   mask: ["mask", "masque", "sheet mask", "clay mask", "peel off", "sleeping mask"],
   retinol: ["retinol", "retinoid", "retinal", "tretinoin", "retin-a"],
   prescription: ["prescription", "tretinoin", "clindamycin", "adapalene", "benzoyl", "tazarotene", "spironolactone"],

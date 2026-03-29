@@ -33,6 +33,9 @@ function isRealIngredientList(text: string): boolean {
   if (!text || text.length < 20) return false;
   const parts = text.split(",");
   if (parts.length < 3) return false;
+  // Reject marketing/label text: too many "%" signs or all-caps promotional phrases
+  const percentCount = (text.match(/%/g) || []).length;
+  if (percentCount > 3) return false;
   const realWords = parts.filter((p) => {
     const t = p.trim();
     return t.length > 3 && /[a-zA-Z]{3,}/.test(t) && !/^\d+$/.test(t);
