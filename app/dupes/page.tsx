@@ -37,6 +37,7 @@ function DupeDetectorInner() {
   const [searched, setSearched] = useState(false);
   const [target, setTarget] = useState<Product | null>(null);
   const [dupes, setDupes] = useState<DupeProduct[]>([]);
+  const [noIngredients, setNoIngredients] = useState(false);
   const [candidates, setCandidates] = useState<Product[]>([]);
   const [suggestions, setSuggestions] = useState<{ name: string; brand: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -74,6 +75,7 @@ function DupeDetectorInner() {
     setCandidates([]);
     setTarget(null);
     setDupes([]);
+    setNoIngredients(false);
     try {
       const params = new URLSearchParams({ q });
       if (cat) params.set("category", cat);
@@ -84,6 +86,7 @@ function DupeDetectorInner() {
       } else {
         setTarget(data.target || null);
         setDupes(data.dupes || []);
+        setNoIngredients(!!data.noIngredients);
       }
     } catch {
       setTarget(null);
@@ -96,6 +99,7 @@ function DupeDetectorInner() {
   const selectCandidate = async (product: Product) => {
     setLoading(true);
     setCandidates([]);
+    setNoIngredients(false);
     try {
       const params = new URLSearchParams({ id: product.id });
       if (category) params.set("category", category);
@@ -103,6 +107,7 @@ function DupeDetectorInner() {
       const data = await res.json();
       setTarget(data.target || null);
       setDupes(data.dupes || []);
+      setNoIngredients(!!data.noIngredients);
     } catch {
       setTarget(null);
       setDupes([]);
@@ -252,11 +257,18 @@ function DupeDetectorInner() {
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 mb-6">
               <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{target.brand}</p>
               <p className="font-semibold text-stone-800">{target.name}</p>
-              <p className="text-xs text-stone-400 mt-1 line-clamp-2">{target.ingredients}</p>
+              {target.ingredients && <p className="text-xs text-stone-400 mt-1 line-clamp-2">{target.ingredients}</p>}
             </div>
-            <p className="text-center text-stone-500 py-8">
-              No close dupes found in our database yet. Try a different category filter or a slightly different name.
-            </p>
+            {noIngredients ? (
+              <p className="text-center text-stone-500 py-8">
+                We don&apos;t have ingredient data for this product yet — dupe matching requires a full ingredient list.
+                Try searching for it by a slightly different name, or pick another product.
+              </p>
+            ) : (
+              <p className="text-center text-stone-500 py-8">
+                No close dupes found in our database yet. Try a different category filter or a slightly different name.
+              </p>
+            )}
           </div>
         )}
 

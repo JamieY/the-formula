@@ -64,16 +64,14 @@ async function findCandidates(query: string, category?: string): Promise<any[]> 
   const nameQuery = supabase
     .from("products")
     .select("id, name, brand, image, ingredients, external_id")
-    .not("ingredients", "is", null)
     .or(words.map((w) => `name.ilike.%${w}%`).join(","))
-    .limit(40);
+    .limit(60);
 
   const brandQuery = supabase
     .from("products")
     .select("id, name, brand, image, ingredients, external_id")
-    .not("ingredients", "is", null)
     .or(words.map((w) => `brand.ilike.%${w}%`).join(","))
-    .limit(40);
+    .limit(60);
 
   const [{ data: nameResults }, { data: brandResults }] = await Promise.all([nameQuery, brandQuery]);
 
@@ -85,7 +83,6 @@ async function findCandidates(query: string, category?: string): Promise<any[]> 
 
   const queryNorm = normalize(query);
   let candidates = merged
-    .filter((p) => isRealIngredientList(p.ingredients))
     .map((p) => {
       const combined = normalize(`${p.brand} ${p.name}`);
       const matchCount = words.filter((w) => combined.includes(w)).length;
@@ -142,7 +139,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           target: null,
           dupes: [],
-          candidates: candidates.slice(0, 40).sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({
+          candidates: candidates.slice(0, 60).sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({
             id: p.external_id || p.id,
             name: p.name,
             brand: p.brand,
@@ -155,8 +152,24 @@ export async function GET(request: NextRequest) {
       target = candidates[0];
     }
 
-    if (!target || !isRealIngredientList(target.ingredients)) {
+    if (!target) {
       return NextResponse.json({ target: null, dupes: [], candidates: [] });
+    }
+
+    // If target has no ingredients, return it with empty dupes and a helpful flag
+    if (!isRealIngredientList(target.ingredients)) {
+      return NextResponse.json({
+        target: {
+          id: target.external_id || target.id,
+          name: target.name,
+          brand: target.brand,
+          image: target.image || null,
+          ingredients: null,
+        },
+        dupes: [],
+        candidates: [],
+        noIngredients: true,
+      });
     }
 
     const targetIngredients = parseIngredients(target.ingredients);
