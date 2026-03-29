@@ -21,11 +21,18 @@ function matchesCategory(product: { name?: string; brand?: string; ingredients?:
   return keywords.some((kw) => haystack.includes(kw));
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
 async function searchOpenBeautyFacts(query: string) {
   try {
-    const response = await fetch(
+    const response = await withTimeout(fetch(
       `https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=8&fields=product_name,brands,ingredients_text,image_url,code`
-    );
+    ), 4000);
     const data = await response.json();
     return (data.products || [])
       .filter((p: any) => p.product_name)
@@ -44,7 +51,7 @@ async function searchOpenBeautyFacts(query: string) {
 
 async function searchSephora(query: string) {
   try {
-    const response = await fetch(
+    const response = await withTimeout(fetch(
       `https://www.sephora.com/api/catalog/categories/search?q=${encodeURIComponent(query)}&currentPage=0&pageSize=8&content=true`,
       {
         headers: {
@@ -53,7 +60,7 @@ async function searchSephora(query: string) {
           "Referer": "https://www.sephora.com",
         },
       }
-    );
+    ), 3000);
     if (!response.ok) return [];
     const data = await response.json();
     const items = data?.products || data?.data?.products || [];
@@ -76,7 +83,7 @@ async function searchSephora(query: string) {
 
 async function searchUlta(query: string) {
   try {
-    const response = await fetch(
+    const response = await withTimeout(fetch(
       `https://www.ulta.com/ulta/browse/catalog?Ntt=${encodeURIComponent(query)}&Nrpp=8&format=json`,
       {
         headers: {
@@ -85,7 +92,7 @@ async function searchUlta(query: string) {
           "Referer": "https://www.ulta.com",
         },
       }
-    );
+    ), 3000);
     if (!response.ok) return [];
     const text = await response.text();
 
@@ -143,7 +150,7 @@ async function searchUlta(query: string) {
 
 async function searchINCIDecoder(query: string) {
   try {
-    const response = await fetch(
+    const response = await withTimeout(fetch(
       `https://incidecoder.com/search?query=${encodeURIComponent(query)}`,
       {
         headers: {
@@ -151,7 +158,7 @@ async function searchINCIDecoder(query: string) {
           "Accept": "text/html",
         },
       }
-    );
+    ), 3000);
     const html = await response.text();
     const products: any[] = [];
     const simpleRegex = /href="\/products\/([^"]+)"/g;
