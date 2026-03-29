@@ -187,7 +187,7 @@ function SearchPageInner() {
         {!loading && results.length > 0 && (
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-stone-500">{results.length} products found</p>
+              <p className="text-sm text-stone-500">{results.length} products found{results.length === 40 ? "+" : ""}</p>
             </div>
 
             {visible.map((product) => (

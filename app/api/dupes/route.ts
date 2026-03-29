@@ -87,7 +87,8 @@ async function findCandidates(query: string, category?: string): Promise<any[]> 
       const combined = normalize(`${p.brand} ${p.name}`);
       const matchCount = words.filter((w) => combined.includes(w)).length;
       const exactBonus = combined.includes(queryNorm) ? 10 : 0;
-      return { ...p, _score: matchCount + exactBonus };
+      const hasIngredients = isRealIngredientList(p.ingredients) ? 5 : 0;
+      return { ...p, _score: matchCount + exactBonus + hasIngredients };
     })
     .sort((a, b) => b._score - a._score);
 

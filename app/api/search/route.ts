@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       ? scored.filter((p) => matchesCategory(p.name, category))
       : scored;
 
-    const products = filtered.slice(0, 25).map((p) => ({
+    const products = filtered.slice(0, 40).map((p) => ({
       id: p.external_id || p.id,
       name: p.name,
       brand: p.brand,
