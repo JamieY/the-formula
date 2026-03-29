@@ -120,12 +120,16 @@ export async function GET(request: NextRequest) {
     let target: any = null;
 
     if (productId) {
-      // Direct lookup by ID
+      // Direct lookup by ID — only include id.eq. if it looks like a UUID (avoids type cast error)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
+      const filter = isUUID
+        ? `id.eq.${productId},external_id.eq.${productId}`
+        : `external_id.eq.${productId}`;
       const { data } = await supabase
         .from("products")
         .select("id, name, brand, image, ingredients, external_id")
-        .or(`id.eq.${productId},external_id.eq.${productId}`)
-        .single();
+        .or(filter)
+        .maybeSingle();
       target = data;
     } else {
       const candidates = await findCandidates(query!, category);

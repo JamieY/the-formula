@@ -116,6 +116,8 @@ function DupeDetectorInner() {
     }
   };
 
+  const fmtIngredients = (s: string | null) => s ? s.replace(/,(?!\s)/g, ", ") : "";
+
   const scoreColor = (score: number) => {
     if (score >= 70) return { bg: "#dcfce7", border: "#16a34a", text: "#15803d" };
     if (score >= 40) return { bg: "#fef9c3", border: "#ca8a04", text: "#92400e" };
@@ -233,7 +235,7 @@ function DupeDetectorInner() {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{p.brand}</p>
                     <p className="font-semibold text-stone-800 truncate">{p.name}</p>
-                    <p className="text-xs text-stone-400 mt-0.5 line-clamp-1">{p.ingredients}</p>
+                    <p className="text-xs text-stone-400 mt-0.5 line-clamp-1">{fmtIngredients(p.ingredients)}</p>
                   </div>
                   <svg className="w-5 h-5 text-stone-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -257,7 +259,7 @@ function DupeDetectorInner() {
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 mb-6">
               <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{target.brand}</p>
               <p className="font-semibold text-stone-800">{target.name}</p>
-              {target.ingredients && <p className="text-xs text-stone-400 mt-1 line-clamp-2">{target.ingredients}</p>}
+              {target.ingredients && <p className="text-xs text-stone-400 mt-1 line-clamp-2">{fmtIngredients(target.ingredients)}</p>}
             </div>
             {noIngredients ? (
               <p className="text-center text-stone-500 py-8">
@@ -289,7 +291,7 @@ function DupeDetectorInner() {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{target.brand}</p>
                   <p className="font-semibold text-stone-800 truncate">{target.name}</p>
-                  <p className="text-xs text-stone-400 mt-0.5 line-clamp-1">{target.ingredients}</p>
+                  <p className="text-xs text-stone-400 mt-0.5 line-clamp-1">{fmtIngredients(target.ingredients)}</p>
                 </div>
               </div>
             </div>

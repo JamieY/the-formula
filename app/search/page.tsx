@@ -212,7 +212,7 @@ function SearchPageInner() {
                       <p className="text-xs text-stone-500 mb-1">{product.price}</p>
                     )}
                     {product.ingredients ? (
-                      <p className="text-xs text-stone-400 line-clamp-2">{product.ingredients}</p>
+                      <p className="text-xs text-stone-400 line-clamp-2">{product.ingredients.replace(/,(?!\s)/g, ", ")}</p>
                     ) : (
                       <p className="text-xs text-stone-300 italic">Ingredients not yet available</p>
                     )}
