@@ -21,6 +21,32 @@ function matchesCategory(product: { name?: string; brand?: string; ingredients?:
   return keywords.some((kw) => haystack.includes(kw));
 }
 
+const KNOWN_BRANDS = [
+  "CeraVe", "La Roche-Posay", "Neutrogena", "Cetaphil", "Olay", "Aveeno",
+  "Eucerin", "Vanicream", "Differin", "Aquaphor", "Bioderma", "Vichy",
+  "The Ordinary", "Paula's Choice", "Drunk Elephant", "Tatcha", "Kiehl's",
+  "Clinique", "Estée Lauder", "Lancome", "Shiseido", "SK-II", "Murad",
+  "Peter Thomas Roth", "First Aid Beauty", "Belif", "Laneige", "Innisfree",
+  "COSRX", "Some By Mi", "Glow Recipe", "Youth To The People", "Herbivore",
+  "Sunday Riley", "Glossier", "Fenty Skin", "Krave Beauty", "Byoma",
+  "Clearstem", "Alpyn Beauty", "Versed", "Good Molecules", "The INKEY List",
+  "Ordinary", "Garnier", "L'Oreal", "Maybelline", "Revlon", "e.l.f.",
+  "Nioxin", "OGX", "Pantene", "Head & Shoulders", "Nizoral",
+];
+
+function guessBrand(name: string): string | null {
+  const lower = name.toLowerCase();
+  for (const brand of KNOWN_BRANDS) {
+    if (lower.startsWith(brand.toLowerCase())) return brand;
+  }
+  // Fall back to first word if it looks like a proper brand (capitalized, >3 chars)
+  const firstWord = name.split(" ")[0];
+  if (firstWord && firstWord.length > 3 && firstWord[0] === firstWord[0].toUpperCase()) {
+    return firstWord;
+  }
+  return null;
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
@@ -36,14 +62,17 @@ async function searchOpenBeautyFacts(query: string) {
     const data = await response.json();
     return (data.products || [])
       .filter((p: any) => p.product_name)
-      .map((p: any) => ({
-        id: p.code,
-        name: p.product_name,
-        brand: p.brands || "Unknown Brand",
-        ingredients: p.ingredients_text || null,
-        image: p.image_url || null,
-        source: "Open Beauty Facts",
-      }));
+      .map((p: any) => {
+        const brand = p.brands || guessBrand(p.product_name) || "Unknown Brand";
+        return {
+          id: p.code,
+          name: p.product_name,
+          brand,
+          ingredients: p.ingredients_text || null,
+          image: p.image_url || null,
+          source: "Open Beauty Facts",
+        };
+      });
   } catch {
     return [];
   }
@@ -166,10 +195,11 @@ async function searchINCIDecoder(query: string) {
     let m;
     while ((m = simpleRegex.exec(html)) !== null) slugs.add(m[1]);
     for (const slug of Array.from(slugs).slice(0, 8)) {
+      const name = slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
       products.push({
         id: `incidecoder-${slug}`,
-        name: slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-        brand: "Unknown Brand",
+        name,
+        brand: guessBrand(name) || "Unknown Brand",
         ingredients: null,
         image: null,
         source: "INCIDecoder",
