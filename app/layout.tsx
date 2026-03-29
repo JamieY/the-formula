@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "The Formula",
   description: "Your personal skincare and haircare product tracker. Never waste money on something you've already tried.",
+  other: {
+    "impact-site-verification": "93fc1dac-6a7c-4ad3-b37d-6a8ba607df27",
+  },
 };
 
 export default function RootLayout({
