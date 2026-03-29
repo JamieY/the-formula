@@ -102,12 +102,42 @@ function containsAny(text: string, list: string[]): string | null {
   return null;
 }
 
+function preprocessIngredients(text: string): string {
+  // Find where the actual ingredient list starts — skip label claims and OCR artifacts
+  const markers = [
+    "ingredients:", "ingredients :", "inci:", "composition:", "ingrédients:",
+    "ingr.:", "ingr:", "contains:", "active ingredients:", "inactive ingredients:",
+  ];
+  const lower = text.toLowerCase();
+  for (const marker of markers) {
+    const idx = lower.indexOf(marker);
+    if (idx !== -1) {
+      text = text.substring(idx + marker.length);
+      break;
+    }
+  }
+
+  // Strip common OCR / label noise before the list
+  text = text
+    .replace(/\d+(\.\d+)?%[^,]*/g, "") // "0% preservative" type claims
+    .replace(/\b(conservateur|preservative|frogrance|fragrance\s*free|parfum\s*free)\s*0%/gi, "")
+    .replace(/\b(sans|free\s*of|without)\b[^,]{0,30}/gi, "")
+    .replace(/\*[^,]{0,60}/g, "") // asterisk footnotes
+    .replace(/\([^)]{0,80}\)/g, "") // parenthetical notes
+    .replace(/[\[\]]/g, "")
+    .trim();
+
+  return text;
+}
+
 export function analyzeIngredients(ingredientsText: string): ProductAnalysis {
+  const cleaned = preprocessIngredients(ingredientsText);
+
   // Split by comma, clean up each ingredient
-  const raw = ingredientsText
-    .split(/,|\.|;/)
-    .map((s) => s.replace(/\(.*?\)/g, "").trim())
-    .filter((s) => s.length > 1);
+  const raw = cleaned
+    .split(/,|;/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 1 && s.length < 80); // skip suspiciously long "ingredients" (OCR garbage)
 
   const analyzed: AnalyzedIngredient[] = raw.map((name) => {
     const flags: IngredientFlag[] = [];
