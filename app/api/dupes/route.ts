@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           target: null,
           dupes: [],
-          candidates: candidates.slice(0, 25).sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({
+          candidates: candidates.slice(0, 40).sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({
             id: p.external_id || p.id,
             name: p.name,
             brand: p.brand,
@@ -180,13 +180,6 @@ export async function GET(request: NextRequest) {
       for (const p of broad) {
         if (!seen.has(p.id)) { pool.push(p); seen.add(p.id); }
       }
-    }
-
-    // Apply category filter to pool if provided
-    if (category && CATEGORY_KEYWORDS[category]) {
-      const kws = CATEGORY_KEYWORDS[category];
-      const filtered = pool.filter((p) => kws.some((kw) => p.name.toLowerCase().includes(kw)));
-      if (filtered.length >= 10) pool = filtered;
     }
 
     const scored = pool
