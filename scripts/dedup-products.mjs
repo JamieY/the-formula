@@ -38,7 +38,13 @@ function normalizeName(s) {
 }
 
 function normalizeBrand(s) {
-  return s.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20);
+  const words = s.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().split(/\s+/);
+  const first = words[0];
+  // Use first word unless it's too short/generic (e.g. "la", "the", "dr")
+  if (first.length <= 3 || ["the", "les", "der"].includes(first)) {
+    return words.join("").slice(0, 20);
+  }
+  return first.slice(0, 15);
 }
 
 async function main() {

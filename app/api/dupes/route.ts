@@ -58,6 +58,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
 const CATEGORY_EXCLUDES: Record<string, string[]> = {
   moisturizer: ["cleanser", "wash", "scrub", "sunscreen", "spf", "serum", "toner", "eye", "mask", "peel"],
   cleanser: ["moisturizer", "lotion", "cream spf", "sunscreen", "serum", "toner"],
+  mask: ["hair", "shampoo", "conditioner", "body wash", "hand"],
 };
 
 async function findCandidates(query: string, category?: string): Promise<any[]> {

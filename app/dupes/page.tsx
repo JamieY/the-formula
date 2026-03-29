@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import NavBar from "@/app/components/NavBar";
@@ -40,9 +40,6 @@ function DupeDetectorInner() {
   const [dupes, setDupes] = useState<DupeProduct[]>([]);
   const [noIngredients, setNoIngredients] = useState(false);
   const [candidates, setCandidates] = useState<Product[]>([]);
-  const [suggestions, setSuggestions] = useState<{ name: string; brand: string }[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -65,25 +62,6 @@ function DupeDetectorInner() {
     }
   }, [initialId, initialQuery]);
   useEffect(() => { if (searched) search(undefined, category); }, [category]);
-
-  const handleQueryChange = (val: string) => {
-    setQuery(val);
-    if (suggestTimer.current) clearTimeout(suggestTimer.current);
-    if (val.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
-    suggestTimer.current = setTimeout(async () => {
-      const res = await fetch(`/api/products/suggest?q=${encodeURIComponent(val)}`);
-      const data = await res.json();
-      setSuggestions(data);
-      setShowSuggestions(data.length > 0);
-    }, 250);
-  };
-
-  const pickSuggestion = (s: { name: string; brand: string }) => {
-    const q = `${s.brand} ${s.name}`;
-    setQuery(q);
-    setShowSuggestions(false);
-    search(q, category);
-  };
 
   const search = async (overrideQuery?: string, overrideCategory?: string) => {
     const q = overrideQuery ?? query;
@@ -173,32 +151,15 @@ function DupeDetectorInner() {
                 <input
                   type="text"
                   value={query}
-                  onChange={(e) => handleQueryChange(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { setShowSuggestions(false); search(); } }}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") search(); }}
                   placeholder="e.g. Neutrogena Hydro Boost..."
                   className="flex-1 bg-transparent outline-none text-stone-700 placeholder-stone-400"
                 />
               </div>
-              {/* Autocomplete dropdown */}
-              {showSuggestions && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden z-20">
-                  {suggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onMouseDown={() => pickSuggestion(s)}
-                      className="w-full text-left px-5 py-3 hover:bg-stone-50 border-b border-stone-100 last:border-0"
-                    >
-                      <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider mr-2">{s.brand}</span>
-                      <span className="text-stone-700 text-sm">{s.name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
             <button
-              onClick={() => { setShowSuggestions(false); search(); }}
+              onClick={() => search()}
               disabled={loading}
               className="px-6 py-3 rounded-full text-white font-medium text-sm flex-shrink-0 disabled:opacity-60"
               style={{ backgroundColor: "#8B4513" }}
