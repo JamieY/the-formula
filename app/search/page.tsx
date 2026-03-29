@@ -204,7 +204,8 @@ function SearchPageInner() {
             </div>
 
             {visible.map((product) => (
-              <div key={product.id} className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100">
+              <div key={product.id} className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 hover:border-stone-300 transition-colors cursor-pointer" onClick={() => router.push(`/product/${encodeURIComponent(product.id)}`)}>
+
                 <div className="flex items-start gap-4">
                   {product.image ? (
                     <img src={product.image} alt={product.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0" />
@@ -229,7 +230,7 @@ function SearchPageInner() {
                       <p className="text-xs text-stone-300 italic">Ingredients not yet available</p>
                     )}
                   </div>
-                  <div className="flex flex-col gap-2 flex-shrink-0">
+                  <div className="flex flex-col gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                     {addedIds.has(product.id) ? (
                       <span className="px-4 py-2 rounded-full text-xs font-medium bg-green-100 text-green-700">
                         ✓ Added
