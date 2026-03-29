@@ -40,15 +40,21 @@ function isRealIngredientList(text: string): boolean {
   return realWords.length >= 3;
 }
 
-// Category keyword mapping for filtering
+// Category keyword mapping — broad enough to catch most product names
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  moisturizer: ["moisturizer", "moisturising", "hydrating cream", "face cream", "daily cream", "lotion", "hydration"],
-  cleanser: ["cleanser", "face wash", "foaming", "cleansing", "micellar", "makeup remover"],
-  serum: ["serum", "essence", "ampoule", "booster"],
-  sunscreen: ["sunscreen", "spf", "sun protection", "uv", "sunblock"],
-  toner: ["toner", "toning", "balancing toner", "mist", "essence toner"],
-  "eye cream": ["eye cream", "eye gel", "eye serum", "eye treatment"],
-  treatment: ["treatment", "spot", "acne", "retinol", "exfoliant", "peel", "aha", "bha"],
+  moisturizer: ["moisturizer", "moisturising", "moisturizing", "cream", "lotion", "hydrating", "hydration", "hydro", "gel cream", "daily face", "face oil", "facial oil", "balm", "butter"],
+  cleanser: ["cleanser", "cleansing", "face wash", "foaming", "micellar", "makeup remover", "cleanse", "wash", "scrub"],
+  serum: ["serum", "essence", "ampoule", "booster", "concentrate", "drops"],
+  sunscreen: ["sunscreen", "spf", "sun protection", "sunblock", "broad spectrum"],
+  toner: ["toner", "toning", "mist", "prep", "softener"],
+  "eye cream": ["eye cream", "eye gel", "eye serum", "eye treatment", "eye"],
+  treatment: ["treatment", "spot", "acne", "retinol", "retinoid", "exfoliant", "peel", "aha", "bha", "salicylic", "glycolic", "vitamin c", "niacinamide", "repair", "mask"],
+};
+
+// Exclusion keywords — if product contains these, exclude from a category
+const CATEGORY_EXCLUDES: Record<string, string[]> = {
+  moisturizer: ["cleanser", "wash", "scrub", "sunscreen", "spf", "serum", "toner", "eye", "mask", "peel"],
+  cleanser: ["moisturizer", "lotion", "cream spf", "sunscreen", "serum", "toner"],
 };
 
 async function findCandidates(query: string, category?: string): Promise<any[]> {
@@ -88,14 +94,17 @@ async function findCandidates(query: string, category?: string): Promise<any[]> 
     })
     .sort((a, b) => b._score - a._score);
 
-  // If category provided, boost matching products to top but never hide others
+  // If category provided, filter candidates — but fall back to all if too few match
   if (category && CATEGORY_KEYWORDS[category]) {
     const kws = CATEGORY_KEYWORDS[category];
-    candidates.sort((a, b) => {
-      const aMatch = kws.some((kw) => a.name.toLowerCase().includes(kw)) ? 1 : 0;
-      const bMatch = kws.some((kw) => b.name.toLowerCase().includes(kw)) ? 1 : 0;
-      return bMatch - aMatch;
+    const excludes = CATEGORY_EXCLUDES[category] || [];
+    const filtered = candidates.filter((p) => {
+      const nameLower = p.name.toLowerCase();
+      const hasExclusion = excludes.some((ex) => nameLower.includes(ex));
+      const hasMatch = kws.some((kw) => nameLower.includes(kw));
+      return hasMatch && !hasExclusion;
     });
+    if (filtered.length >= 3) candidates = filtered;
   }
 
   return candidates;

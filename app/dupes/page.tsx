@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import NavBar from "@/app/components/NavBar";
@@ -38,10 +38,32 @@ function DupeDetectorInner() {
   const [target, setTarget] = useState<Product | null>(null);
   const [dupes, setDupes] = useState<DupeProduct[]>([]);
   const [candidates, setCandidates] = useState<Product[]>([]);
+  const [suggestions, setSuggestions] = useState<{ name: string; brand: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
   useEffect(() => { if (initialQuery) search(undefined, ""); }, [initialQuery]);
   useEffect(() => { if (searched) search(undefined, category); }, [category]);
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    if (val.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    suggestTimer.current = setTimeout(async () => {
+      const res = await fetch(`/api/products/suggest?q=${encodeURIComponent(val)}`);
+      const data = await res.json();
+      setSuggestions(data);
+      setShowSuggestions(data.length > 0);
+    }, 250);
+  };
+
+  const pickSuggestion = (s: { name: string; brand: string }) => {
+    const q = `${s.brand} ${s.name}`;
+    setQuery(q);
+    setShowSuggestions(false);
+    search(q, category);
+  };
 
   const search = async (overrideQuery?: string, overrideCategory?: string) => {
     const q = overrideQuery ?? query;
@@ -116,22 +138,41 @@ function DupeDetectorInner() {
 
         {/* Search bar + filters */}
         <div className="mb-10">
-          <div className="flex gap-3 mb-3">
-            <div className="flex-1 flex items-center gap-3 bg-white rounded-full px-6 py-4 shadow-sm border border-stone-200">
-              <svg className="w-5 h-5 text-stone-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && search()}
-                placeholder="e.g. Neutrogena Hydro Boost..."
-                className="flex-1 bg-transparent outline-none text-stone-700 placeholder-stone-400"
-              />
+          <div className="flex gap-3 mb-3 relative">
+            <div className="flex-1 relative">
+              <div className="flex items-center gap-3 bg-white rounded-full px-6 py-4 shadow-sm border border-stone-200">
+                <svg className="w-5 h-5 text-stone-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => handleQueryChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { setShowSuggestions(false); search(); } }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  placeholder="e.g. Neutrogena Hydro Boost..."
+                  className="flex-1 bg-transparent outline-none text-stone-700 placeholder-stone-400"
+                />
+              </div>
+              {/* Autocomplete dropdown */}
+              {showSuggestions && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden z-20">
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onMouseDown={() => pickSuggestion(s)}
+                      className="w-full text-left px-5 py-3 hover:bg-stone-50 border-b border-stone-100 last:border-0"
+                    >
+                      <span className="text-xs font-semibold text-stone-400 uppercase tracking-wider mr-2">{s.brand}</span>
+                      <span className="text-stone-700 text-sm">{s.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button
-              onClick={() => search()}
+              onClick={() => { setShowSuggestions(false); search(); }}
               disabled={loading}
               className="px-6 py-3 rounded-full text-white font-medium text-sm flex-shrink-0 disabled:opacity-60"
               style={{ backgroundColor: "#8B4513" }}
@@ -140,13 +181,13 @@ function DupeDetectorInner() {
             </button>
           </div>
 
-          {/* Category filters — single row, no wrap */}
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          {/* Category filters — wrap on mobile, single row on desktop */}
+          <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
                 onClick={() => setCategory(cat.key)}
-                className="px-4 py-1.5 rounded-full text-sm border transition-colors whitespace-nowrap flex-shrink-0"
+                className="px-4 py-1.5 rounded-full text-sm border transition-colors whitespace-nowrap"
                 style={category === cat.key
                   ? { backgroundColor: "#8B4513", color: "white", borderColor: "#8B4513" }
                   : { backgroundColor: "white", color: "#78716c", borderColor: "#e7e5e4" }
