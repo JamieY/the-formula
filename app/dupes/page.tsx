@@ -31,6 +31,7 @@ const CATEGORIES = [
 function DupeDetectorInner() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
+  const initialId = searchParams.get("id") || "";
   const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,7 +45,25 @@ function DupeDetectorInner() {
   const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
-  useEffect(() => { if (initialQuery) search(undefined, ""); }, [initialQuery]);
+  useEffect(() => {
+    if (initialId) {
+      // Direct product lookup from product detail page
+      setLoading(true);
+      setSearched(true);
+      fetch(`/api/dupes?id=${encodeURIComponent(initialId)}`)
+        .then((r) => r.json())
+        .then((data) => {
+          setTarget(data.target || null);
+          setDupes(data.dupes || []);
+          setNoIngredients(!!data.noIngredients);
+          if (data.target) setQuery(`${data.target.brand} ${data.target.name}`);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else if (initialQuery) {
+      search(undefined, "");
+    }
+  }, [initialId, initialQuery]);
   useEffect(() => { if (searched) search(undefined, category); }, [category]);
 
   const handleQueryChange = (val: string) => {

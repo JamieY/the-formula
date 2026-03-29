@@ -207,7 +207,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             )}
 
             <Link
-              href={`/dupes?q=${encodeURIComponent(`${product.brand} ${product.name}`)}`}
+              href={`/dupes?id=${encodeURIComponent(product.id)}`}
               className="block w-full py-3 rounded-full border border-stone-300 text-stone-700 font-medium text-sm text-center hover:bg-stone-100"
             >
               🔄 Find a Dupe

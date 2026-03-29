@@ -157,7 +157,16 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      target = candidates[0];
+      // Require the top candidate to match at least 2 query words to avoid
+      // false positives (e.g. "La Roche-Posay Cicaplast" matching a Skin1004
+      // product only because both names contain "spf50")
+      const top = candidates[0];
+      const rawMatchCount = top._score - (isRealIngredientList(top.ingredients) ? 5 : 0);
+      const minRequired = words.length >= 3 ? 2 : 1;
+      if (rawMatchCount < minRequired) {
+        return NextResponse.json({ target: null, dupes: [], candidates: [] });
+      }
+      target = top;
     }
 
     if (!target) {
