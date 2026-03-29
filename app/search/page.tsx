@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { supabase, type ProductStatus, STATUS_LABELS } from "@/lib/supabase";
 
 interface Product {
   id: string;
@@ -46,6 +47,10 @@ function SearchPageInner() {
   const [searched, setSearched] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [sources, setSources] = useState<Record<string, number>>({});
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
+  const [statusPicker, setStatusPicker] = useState<{ product: Product } | null>(null);
+  const router = useRouter();
 
   const search = async (q: string, cat: string) => {
     if (!q.trim()) return;
@@ -74,6 +79,44 @@ function SearchPageInner() {
   const handleCategoryChange = (cat: string) => {
     setCategory(cat);
     if (searched) search(query, cat);
+  };
+
+  const addToLog = async (product: Product, status: ProductStatus) => {
+    setStatusPicker(null);
+    setAddingId(product.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push("/login"); return; }
+
+      // Upsert product into products table
+      const { data: savedProduct, error: productError } = await supabase
+        .from("products")
+        .upsert({
+          name: product.name,
+          brand: product.brand,
+          ingredients: product.ingredients,
+          image: product.image,
+          source_name: product.source || null,
+          external_id: product.id,
+        }, { onConflict: "external_id" })
+        .select("id")
+        .single();
+
+      if (productError || !savedProduct) throw productError;
+
+      // Link to user
+      await supabase.from("user_products").upsert({
+        user_id: user.id,
+        product_id: savedProduct.id,
+        status,
+      }, { onConflict: "user_id,product_id" });
+
+      setAddedIds((prev) => new Set(prev).add(product.id));
+    } catch {
+      alert("Could not add to log. Please try again.");
+    } finally {
+      setAddingId(null);
+    }
   };
 
   const visible = showAll ? results : results.slice(0, 6);
@@ -207,12 +250,20 @@ function SearchPageInner() {
                     )}
                   </div>
                   <div className="flex flex-col gap-2 flex-shrink-0">
-                    <button
-                      className="px-4 py-2 rounded-full text-xs font-medium text-white"
-                      style={{ backgroundColor: "#8B4513" }}
-                    >
-                      + Add to Log
-                    </button>
+                    {addedIds.has(product.id) ? (
+                      <span className="px-4 py-2 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                        ✓ Added
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setStatusPicker({ product })}
+                        disabled={addingId === product.id}
+                        className="px-4 py-2 rounded-full text-xs font-medium text-white disabled:opacity-60"
+                        style={{ backgroundColor: "#8B4513" }}
+                      >
+                        {addingId === product.id ? "Adding..." : "+ Add to Log"}
+                      </button>
+                    )}
                     {product.url && (
                       <a
                         href={product.url}
@@ -239,6 +290,31 @@ function SearchPageInner() {
           </div>
         )}
       </div>
+
+      {/* Status picker modal */}
+      {statusPicker && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-6"
+          onClick={() => setStatusPicker(null)}>
+          <div className="bg-white rounded-3xl p-8 shadow-xl max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <h2 className="font-serif font-semibold text-xl mb-1" style={{ color: "#2C2C2C" }}>Add to Log</h2>
+            <p className="text-stone-500 text-sm mb-6 truncate">{statusPicker.product.name}</p>
+            <div className="flex flex-col gap-3">
+              {(Object.keys(STATUS_LABELS) as ProductStatus[]).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => addToLog(statusPicker.product, status)}
+                  className="w-full py-3 rounded-full text-sm font-medium border border-stone-200 text-stone-700 hover:bg-stone-50 text-left px-5"
+                >
+                  {STATUS_LABELS[status]}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setStatusPicker(null)} className="w-full mt-4 text-sm text-stone-400 hover:text-stone-600">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
