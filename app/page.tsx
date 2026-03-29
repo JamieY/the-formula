@@ -13,6 +13,9 @@ export default function Home() {
           <Link href="/" className="text-sm font-medium" style={{ color: "#8B4513" }}>
             Home
           </Link>
+          <Link href="/search" className="text-sm font-medium text-stone-600 hover:text-stone-900">
+            Search
+          </Link>
           <Link href="/dupes" className="text-sm font-medium text-stone-600 hover:text-stone-900">
             Dupe Detector
           </Link>
@@ -56,7 +59,7 @@ export default function Home() {
             Create Free Account
           </Link>
           <Link
-            href="/"
+            href="/search"
             className="px-6 py-3 rounded-full text-sm font-medium border border-stone-300 text-stone-700 hover:bg-stone-100"
           >
             Try Without Signing Up
