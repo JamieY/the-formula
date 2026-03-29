@@ -10,19 +10,31 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [resent, setResent] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setNeedsConfirmation(false);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      setError(error.message);
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        setNeedsConfirmation(true);
+      } else {
+        setError(error.message);
+      }
       setLoading(false);
     } else {
       router.push("/log");
     }
+  };
+
+  const resendConfirmation = async () => {
+    await supabase.auth.resend({ type: "signup", email });
+    setResent(true);
   };
 
   return (
@@ -50,6 +62,19 @@ export default function Login() {
             {error && (
               <div className="mb-4 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600">
                 {error}
+              </div>
+            )}
+            {needsConfirmation && (
+              <div className="mb-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                <p className="font-medium mb-1">Please confirm your email first.</p>
+                <p className="text-amber-700 mb-2">Check your inbox for a confirmation link from The Formula.</p>
+                {resent ? (
+                  <p className="text-green-700 font-medium">✓ Confirmation email resent!</p>
+                ) : (
+                  <button onClick={resendConfirmation} className="text-amber-900 underline font-medium">
+                    Resend confirmation email →
+                  </button>
+                )}
               </div>
             )}
 

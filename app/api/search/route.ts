@@ -178,6 +178,7 @@ async function searchUlta(query: string) {
   }
 }
 
+
 async function searchINCIDecoder(query: string) {
   try {
     const response = await withTimeout(fetch(

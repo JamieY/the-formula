@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, type ProductStatus, STATUS_LABELS } from "@/lib/supabase";
+import NavBar from "@/app/components/NavBar";
 
 interface Product {
   id: string;
@@ -117,23 +118,9 @@ function SearchPageInner() {
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "#F5F0EA" }}>
-      {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-5 border-b border-stone-200">
-        <Link href="/" className="text-2xl font-serif font-semibold" style={{ color: "#2C2C2C" }}>
-          The Formula
-        </Link>
-        <div className="flex items-center gap-8">
-          <Link href="/" className="text-sm font-medium text-stone-600 hover:text-stone-900">Home</Link>
-          <Link href="/dupes" className="text-sm font-medium text-stone-600 hover:text-stone-900">Dupe Detector</Link>
-          <Link href="/log" className="text-sm font-medium text-stone-600 hover:text-stone-900">My Log</Link>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/signup" className="text-sm font-medium text-stone-600 hover:text-stone-900">Sign Up</Link>
-          <Link href="/login" className="px-4 py-2 rounded-full text-sm font-medium text-white" style={{ backgroundColor: "#8B4513" }}>Log In</Link>
-        </div>
-      </nav>
+      <NavBar />
 
-      <div className="max-w-3xl mx-auto px-8 py-12">
+      <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 md:py-12">
         <h1 className="text-3xl font-serif font-semibold mb-2" style={{ color: "#2C2C2C" }}>
           Search Products
         </h1>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, STATUS_LABELS, STATUS_COLORS, type ProductStatus } from "@/lib/supabase";
+import NavBar from "@/app/components/NavBar";
 
 interface LogEntry {
   id: string;
@@ -12,6 +13,7 @@ interface LogEntry {
   created_at: string;
   products: {
     id: string;
+    external_id: string | null;
     name: string;
     brand: string;
     ingredients: string | null;
@@ -43,7 +45,7 @@ export default function MyLog() {
   const fetchLog = async (userId: string) => {
     const { data, error } = await supabase
       .from("user_products")
-      .select(`id, status, note, created_at, products (id, name, brand, ingredients, image)`)
+      .select(`id, status, note, created_at, products (id, external_id, name, brand, ingredients, image)`)
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
@@ -61,6 +63,16 @@ export default function MyLog() {
     return map[label] || null;
   };
 
+  const updateStatus = async (entryId: string, status: ProductStatus) => {
+    setEntries((prev) => prev.map((e) => e.id === entryId ? { ...e, status } : e));
+    await supabase.from("user_products").update({ status }).eq("id", entryId);
+  };
+
+  const deleteEntry = async (entryId: string) => {
+    setEntries((prev) => prev.filter((e) => e.id !== entryId));
+    await supabase.from("user_products").delete().eq("id", entryId);
+  };
+
   const visible = entries.filter((e) => {
     if (filter !== "All") {
       const key = filterStatusKey(filter);
@@ -75,25 +87,7 @@ export default function MyLog() {
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "#F5F0EA" }}>
-      <nav className="flex items-center justify-between px-8 py-5 border-b border-stone-200">
-        <Link href="/" className="text-2xl font-serif font-semibold" style={{ color: "#2C2C2C" }}>
-          The Formula
-        </Link>
-        <div className="flex items-center gap-8">
-          <Link href="/" className="text-sm font-medium text-stone-600 hover:text-stone-900">Home</Link>
-          <Link href="/search" className="text-sm font-medium text-stone-600 hover:text-stone-900">Search</Link>
-          <Link href="/dupes" className="text-sm font-medium text-stone-600 hover:text-stone-900">Dupe Detector</Link>
-          <Link href="/log" className="text-sm font-medium" style={{ color: "#8B4513" }}>My Log</Link>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={async () => { await supabase.auth.signOut(); router.push("/"); }}
-            className="text-sm font-medium text-stone-600 hover:text-stone-900"
-          >
-            Sign Out
-          </button>
-        </div>
-      </nav>
+      <NavBar />
 
       <div className="max-w-4xl mx-auto px-8 py-12">
         <div className="flex items-center justify-between mb-8">
@@ -154,7 +148,11 @@ export default function MyLog() {
         {!loading && visible.length > 0 && (
           <div className="flex flex-col gap-4">
             {visible.map((entry) => (
-              <div key={entry.id} className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 flex items-center gap-6">
+              <div
+                key={entry.id}
+                className="bg-white rounded-2xl p-6 shadow-sm border border-stone-100 hover:border-stone-300 transition-colors flex items-center gap-6 cursor-pointer"
+                onClick={() => router.push(`/product/${encodeURIComponent(entry.products.external_id || entry.products.id)}`)}
+              >
                 <div className="w-16 h-16 rounded-xl bg-stone-100 flex-shrink-0 overflow-hidden">
                   {entry.products.image ? (
                     <img src={entry.products.image} alt={entry.products.name} className="w-full h-full object-cover" />
@@ -165,9 +163,27 @@ export default function MyLog() {
                   <p className="font-semibold text-stone-800 mb-1">{entry.products.name}</p>
                   {entry.note && <p className="text-sm text-stone-500 truncate">{entry.note}</p>}
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${STATUS_COLORS[entry.status]}`}>
-                  {STATUS_LABELS[entry.status]}
-                </span>
+                <div className="flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <select
+                    value={entry.status}
+                    onChange={(e) => updateStatus(entry.id, e.target.value as ProductStatus)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${STATUS_COLORS[entry.status]}`}
+                    style={{ appearance: "none", paddingRight: "1.5rem", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2378716c'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 0.5rem center" }}
+                  >
+                    {(Object.keys(STATUS_LABELS) as ProductStatus[]).map((s) => (
+                      <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => deleteEntry(entry.id)}
+                    className="p-1.5 rounded-full text-stone-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                    title="Remove from log"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>

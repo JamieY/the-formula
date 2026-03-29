@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, STATUS_LABELS, type ProductStatus } from "@/lib/supabase";
 import { analyzeIngredients, type ProductAnalysis } from "@/lib/ingredients";
+import NavBar from "@/app/components/NavBar";
 
 interface Product {
   id: string;
@@ -25,14 +26,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [addingStatus, setAddingStatus] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [flagNote, setFlagNote] = useState("");
+  const [flagSubmitting, setFlagSubmitting] = useState(false);
+  const [flagDone, setFlagDone] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    fetchProduct();
-  }, [id]);
+  useEffect(() => { fetchProduct(); }, [id]);
 
   const fetchProduct = async () => {
-    // First check our own database
     const { data: dbProduct } = await supabase
       .from("products")
       .select("*")
@@ -54,7 +56,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       return;
     }
 
-    // Otherwise fetch from source API
     try {
       const res = await fetch(`/api/product/${encodeURIComponent(id)}`);
       if (res.ok) {
@@ -62,9 +63,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         setProduct(data);
         if (data.ingredients) setAnalysis(analyzeIngredients(data.ingredients));
       }
-    } catch {
-      // silent fail
-    }
+    } catch { /* silent fail */ }
     setLoading(false);
   };
 
@@ -105,6 +104,41 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const submitFlag = async () => {
+    setFlagSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // Save product to DB first if not already there
+      const { data: saved } = await supabase
+        .from("products")
+        .upsert({
+          name: product!.name,
+          brand: product!.brand,
+          ingredients: product!.ingredients,
+          image: product!.image,
+          source_name: product!.source || null,
+          external_id: product!.id,
+        }, { onConflict: "external_id" })
+        .select("id")
+        .single();
+
+      await supabase.from("formula_flags").insert({
+        product_id: saved?.id || null,
+        user_id: user?.id || null,
+        note: flagNote || null,
+        status: "pending",
+      });
+
+      setFlagDone(true);
+      setTimeout(() => { setShowFlagModal(false); setFlagDone(false); setFlagNote(""); }, 2000);
+    } catch {
+      alert("Could not submit report. Please try again.");
+    } finally {
+      setFlagSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#F5F0EA" }}>
@@ -115,10 +149,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   if (!product) {
     return (
-      <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#F5F0EA" }}>
-        <div className="text-center">
+      <main className="min-h-screen" style={{ backgroundColor: "#F5F0EA" }}>
+        <NavBar />
+        <div className="flex flex-col items-center justify-center py-32">
           <p className="text-stone-500 mb-4">Product not found.</p>
-          <Link href="/search" className="text-sm font-medium" style={{ color: "#8B4513" }}>Back to Search</Link>
+          <Link href="/search" className="text-sm font-medium" style={{ color: "#8B4513" }}>← Back to Search</Link>
         </div>
       </main>
     );
@@ -126,92 +161,119 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "#F5F0EA" }}>
-      {/* Navigation */}
-      <nav className="flex items-center justify-between px-8 py-5 border-b border-stone-200">
-        <Link href="/" className="text-2xl font-serif font-semibold" style={{ color: "#2C2C2C" }}>The Formula</Link>
-        <div className="flex items-center gap-8">
-          <Link href="/" className="text-sm font-medium text-stone-600 hover:text-stone-900">Home</Link>
-          <Link href="/search" className="text-sm font-medium text-stone-600 hover:text-stone-900">Search</Link>
-          <Link href="/log" className="text-sm font-medium text-stone-600 hover:text-stone-900">My Log</Link>
-        </div>
-        <div className="flex items-center gap-4">
-          <Link href="/search" className="text-sm font-medium text-stone-600 hover:text-stone-900">← Back</Link>
-        </div>
-      </nav>
+      <NavBar />
 
-      <div className="max-w-5xl mx-auto px-8 py-10 grid grid-cols-1 md:grid-cols-2 gap-12">
-        {/* Left column */}
+      {/* Breadcrumb */}
+      <div className="max-w-5xl mx-auto px-4 md:px-8 pt-6">
+        <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-6 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+
+        {/* Left column — image + action buttons */}
         <div>
-          <div className="w-full aspect-square rounded-2xl bg-stone-100 mb-6 flex items-center justify-center overflow-hidden">
+          <div className="w-full aspect-square rounded-2xl bg-stone-100 mb-5 flex items-center justify-center overflow-hidden">
             {product.image ? (
-              <img src={product.image} alt={product.name} className="w-full h-full object-contain" />
+              <img src={product.image} alt={product.name} className="w-full h-full object-contain p-4" />
             ) : (
-              <span className="text-stone-300 text-sm">No image available</span>
+              <div className="flex flex-col items-center gap-2">
+                <svg className="w-12 h-12 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                </svg>
+                <span className="text-stone-400 text-xs">No image available</span>
+              </div>
             )}
           </div>
 
-          {product.url && (
+          <div className="flex flex-col gap-3">
+            {added ? (
+              <div className="w-full py-3 rounded-full text-center text-sm font-medium bg-green-100 text-green-700">
+                ✓ Added to your log
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowStatusPicker(true)}
+                disabled={!!addingStatus}
+                className="w-full py-3 rounded-full text-white font-medium text-sm disabled:opacity-60"
+                style={{ backgroundColor: "#8B4513" }}
+              >
+                {addingStatus ? "Adding..." : "+ Add to My Log"}
+              </button>
+            )}
+
+            <Link
+              href={`/dupes?q=${encodeURIComponent(`${product.brand} ${product.name}`)}`}
+              className="block w-full py-3 rounded-full border border-stone-300 text-stone-700 font-medium text-sm text-center hover:bg-stone-100"
+            >
+              🔄 Find a Dupe
+            </Link>
+
             <a
-              href={product.url}
+              href={`https://www.amazon.com/s?k=${encodeURIComponent(`${product.brand} ${product.name}`)}&tag=theformula20-20`}
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full py-3 rounded-full border border-stone-300 text-stone-700 font-medium text-sm text-center hover:bg-stone-100 mb-3"
+              className="block w-full py-3 rounded-full border border-amber-200 text-amber-800 font-medium text-sm text-center hover:bg-amber-50"
             >
-              View on {product.source || "Source"}
+              Find on Amazon
             </a>
-          )}
+          </div>
         </div>
 
-        {/* Right column */}
+        {/* Right column — details + ingredients */}
         <div>
           <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: "#8B4513" }}>{product.brand}</p>
-          <h1 className="text-3xl font-serif font-semibold mb-6" style={{ color: "#2C2C2C" }}>{product.name}</h1>
+          <h1 className="text-2xl md:text-3xl font-serif font-semibold mb-2" style={{ color: "#2C2C2C" }}>{product.name}</h1>
 
-          {/* Quality badges */}
-          {analysis && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${analysis.isFASafe ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
-                {analysis.isFASafe ? "✓" : "⚠"} Fungal Acne Safe
-              </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${analysis.isFragranceFree ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                {analysis.isFragranceFree ? "✓ Fragrance Free" : "⚠ Contains Fragrance"}
-              </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${analysis.isAlcoholFree ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                {analysis.isAlcoholFree ? "✓ Alcohol Free" : "⚠ Contains Alcohol"}
-              </span>
-              {analysis.comedogenicCount > 0 && (
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                  ⚠ {analysis.comedogenicCount} Comedogenic Ingredient{analysis.comedogenicCount > 1 ? "s" : ""}
-                </span>
-              )}
-              {analysis.beneficialCount > 0 && (
-                <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                  ✓ {analysis.beneficialCount} Key Active{analysis.beneficialCount > 1 ? "s" : ""}
-                </span>
-              )}
-            </div>
+          {product.price && (
+            <p className="text-stone-500 text-sm mb-4">{product.price}</p>
           )}
 
-          {/* Add to log */}
-          {added ? (
-            <div className="w-full py-3 rounded-full text-center text-sm font-medium bg-green-100 text-green-700 mb-6">
-              ✓ Added to your log
+          {/* Analysis summary */}
+          {analysis && (
+            <div className="bg-white rounded-2xl p-4 border border-stone-100 mb-5">
+              <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3">Ingredient Analysis</p>
+              <div className="flex flex-wrap gap-2">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${analysis.isFASafe ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                  {analysis.isFASafe ? "✓" : "⚠"} Fungal Acne Safe
+                </span>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${analysis.isFragranceFree ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                  {analysis.isFragranceFree ? "✓ Fragrance Free" : "⚠ Contains Fragrance"}
+                </span>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${analysis.isAlcoholFree ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                  {analysis.isAlcoholFree ? "✓ Alcohol Free" : "⚠ Contains Alcohol"}
+                </span>
+                {analysis.comedogenicCount > 0 && (
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                    ⚠ {analysis.comedogenicCount} Comedogenic
+                  </span>
+                )}
+                {analysis.beneficialCount > 0 && (
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                    ✓ {analysis.beneficialCount} Key Active{analysis.beneficialCount > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-stone-400 mt-3">
+                {analysis.ingredients.length} ingredients analyzed · {analysis.ingredients.filter(i => i.flags.length > 0).length} flagged
+              </p>
             </div>
-          ) : (
-            <button
-              onClick={() => setShowStatusPicker(true)}
-              disabled={!!addingStatus}
-              className="w-full py-3 rounded-full text-white font-medium text-sm mb-6 disabled:opacity-60"
-              style={{ backgroundColor: "#8B4513" }}
-            >
-              {addingStatus ? "Adding..." : "+ Add to My Log"}
-            </button>
           )}
 
           {/* Ingredient list */}
-          <h2 className="font-semibold text-stone-800 mb-3">Ingredient List</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-stone-800">Full Ingredient List</h2>
+            {analysis && (
+              <span className="text-xs text-stone-400">{analysis.ingredients.length} ingredients</span>
+            )}
+          </div>
+
           {analysis ? (
-            <div className="flex flex-col gap-1.5 mb-8 max-h-96 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-1.5 mb-6 max-h-80 overflow-y-auto pr-1">
               {analysis.ingredients.map((ing, i) => {
                 const fa = ing.flags.find((f) => f.type === "fa_trigger");
                 const comedogenic = ing.flags.find((f) => f.type === "comedogenic");
@@ -242,7 +304,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               })}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl p-6 border border-stone-100 text-center mb-8">
+            <div className="bg-white rounded-2xl p-6 border border-stone-100 text-center mb-6">
               <p className="text-stone-400 text-sm">Ingredient list not available for this product.</p>
               {product.url && (
                 <a href={product.url} target="_blank" rel="noopener noreferrer" className="text-sm mt-2 inline-block" style={{ color: "#8B4513" }}>
@@ -251,6 +313,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               )}
             </div>
           )}
+
+          {/* Flag formula change */}
+          <button
+            onClick={() => setShowFlagModal(true)}
+            className="flex items-center gap-2 text-xs text-stone-400 hover:text-amber-600 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+            </svg>
+            Report formula change
+          </button>
         </div>
       </div>
 
@@ -274,6 +347,50 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <button onClick={() => setShowStatusPicker(false)} className="w-full mt-4 text-sm text-stone-400 hover:text-stone-600">
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Flag formula modal */}
+      {showFlagModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-6" onClick={() => setShowFlagModal(false)}>
+          <div className="bg-white rounded-3xl p-8 shadow-xl max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            {flagDone ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="font-semibold text-stone-800">Thanks for the report!</p>
+                <p className="text-stone-500 text-sm mt-1">We'll review and update the formula.</p>
+              </div>
+            ) : (
+              <>
+                <h2 className="font-serif font-semibold text-xl mb-1" style={{ color: "#2C2C2C" }}>Report Formula Change</h2>
+                <p className="text-stone-500 text-sm mb-5">
+                  Has the formula for <span className="font-medium text-stone-700">{product.name}</span> changed? Let us know and we'll refresh the ingredient data.
+                </p>
+                <textarea
+                  value={flagNote}
+                  onChange={(e) => setFlagNote(e.target.value)}
+                  placeholder="Optional: what changed? (e.g. removed fragrance, added niacinamide...)"
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl border border-stone-200 text-sm text-stone-700 placeholder-stone-300 outline-none focus:border-stone-400 resize-none mb-4 bg-stone-50"
+                />
+                <button
+                  onClick={submitFlag}
+                  disabled={flagSubmitting}
+                  className="w-full py-3 rounded-full text-white font-medium text-sm disabled:opacity-60"
+                  style={{ backgroundColor: "#8B4513" }}
+                >
+                  {flagSubmitting ? "Submitting..." : "Submit Report"}
+                </button>
+                <button onClick={() => setShowFlagModal(false)} className="w-full mt-3 text-sm text-stone-400 hover:text-stone-600">
+                  Cancel
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
