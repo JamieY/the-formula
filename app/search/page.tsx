@@ -148,7 +148,7 @@ function SearchPageInner() {
         {loading && (
           <div className="text-center py-12">
             <div className="inline-block w-8 h-8 border-2 border-stone-300 border-t-stone-600 rounded-full animate-spin mb-3" />
-            <p className="text-stone-500 text-sm">Searching Sephora, Ulta, Open Beauty Facts, and more...</p>
+            <p className="text-stone-500 text-sm">Searching products...</p>
           </div>
         )}
 

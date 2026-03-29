@@ -192,12 +192,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [obfResults, sephoraResults, ultaResults, inciResults] = await Promise.all([
+    const [obfResults, inciResults] = await Promise.all([
       searchOpenBeautyFacts(query),
-      searchSephora(query),
-      searchUlta(query),
       searchINCIDecoder(query),
     ]);
+    const sephoraResults: any[] = [];
+    const ultaResults: any[] = [];
 
     // Merge — deduplicate by name similarity
     const seen = new Set<string>();
