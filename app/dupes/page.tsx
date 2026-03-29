@@ -97,7 +97,8 @@ function DupeDetectorInner() {
   const scoreLabel = (score: number) => {
     if (score >= 70) return "Strong match";
     if (score >= 40) return "Partial match";
-    return "Low match";
+    if (score >= 15) return "Low match";
+    return "Closest available";
   };
 
   return (

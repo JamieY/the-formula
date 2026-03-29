@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
       if (filtered.length >= 10) pool = filtered;
     }
 
-    const dupes = pool
+    const scored = pool
       .filter((p) => {
         const pBrand = normalize(p.brand || "");
         const targetWords = targetBrandNorm.split(" ").filter((w) => w.length > 3);
@@ -201,9 +201,10 @@ export async function GET(request: NextRequest) {
         const score = similarityScore(targetIngredients, pIngredients);
         return { id: p.external_id || p.id, name: p.name, brand: p.brand, image: p.image || null, ingredients: p.ingredients, score };
       })
-      .filter((p) => p.score > 5)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 8);
+      .sort((a, b) => b.score - a.score);
+
+    // Always return top 8 closest matches — never show "no dupes found" if we have candidates
+    const dupes = scored.slice(0, 8);
 
     return NextResponse.json({
       target: {
