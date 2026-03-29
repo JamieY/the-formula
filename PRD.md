@@ -100,6 +100,14 @@ Scrape r/SkincareAddiction, r/AsianBeauty, r/tretinoin, etc. for brand/product m
 ### Formula Change Alerts
 When a brand updates a product's ingredient list, notify users who have it in their log. Requires periodic re-scraping of product pages to detect changes.
 
+### Data Freshness / Ingredient Accuracy (when user base grows)
+Once real users are actively using the app:
+- Run a monthly re-scrape of the most-viewed products to catch reformulations
+- Show a "Last verified: [date]" badge on ingredient lists so users know how fresh the data is
+- Let users upvote/confirm accuracy, or flag outdated ingredient lists
+
+Current approach: "Report Formula Change" button on every product page handles this lightweight for now. Revisit when top 500 most-searched products need regular refresh.
+
 ---
 
 ## Affiliate Revenue Model
