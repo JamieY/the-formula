@@ -242,10 +242,15 @@ export async function GET(request: NextRequest) {
       if (key && !seen.has(key)) { seen.add(key); combined.push(p); }
     }
 
+    // Drop low-quality results — must have at least a real brand OR ingredients
+    const quality = combined.filter((p) =>
+      (p.brand && p.brand !== "Unknown Brand") || (p.ingredients && p.ingredients.length > 20)
+    );
+
     // Apply category filter using keyword expansion
     const filtered = category
-      ? combined.filter((p) => matchesCategory(p, category))
-      : combined;
+      ? quality.filter((p) => matchesCategory(p, category))
+      : quality;
 
     return NextResponse.json({
       products: filtered.slice(0, 15),
