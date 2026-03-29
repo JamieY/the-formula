@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Maps filter buttons to keyword lists for matching product names
 const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  moisturizer: ["moisturizer", "moisturizing", "moisturising", "hydrating", "hydration", "cream", "lotion", "emollient", "barrier"],
-  cleanser: ["cleanser", "cleansing", "face wash", "facial wash", "foaming", "gel wash", "micellar", "cleanse"],
-  serum: ["serum", "concentrate", "ampoule", "essence", "booster"],
-  toner: ["toner", "tonic", "mist", "essence toner"],
-  sunscreen: ["sunscreen", "spf", "sun protection", "broad spectrum", "uv", "sunblock"],
-  eye: ["eye cream", "eye gel", "eye serum", "eye", "under eye", "undereye"],
-  mask: ["mask", "masque", "sheet mask", "clay mask", "peel"],
-  retinol: ["retinol", "retinoid", "retinal", "tretinoin", "retin-a", "vitamin a"],
+  moisturizer: ["moisturizer", "moisturizing", "moisturising", "hydrating lotion", "hydrating cream", "daily lotion", "facial lotion", "body lotion", "emollient", "barrier cream", "barrier repair"],
+  cleanser: ["cleanser", "cleansing", "face wash", "facial wash", "foaming wash", "gel wash", "micellar", "cleanse", "makeup remover"],
+  serum: ["serum", "concentrate", "ampoule", "booster"],
+  toner: ["toner", "toning", "balancing mist", "facial mist"],
+  sunscreen: ["sunscreen", "spf", "sun protection", "broad spectrum", "sunblock", "uv shield"],
+  eye: ["eye cream", "eye gel", "eye serum", "eye contour", "under eye", "undereye"],
+  mask: ["mask", "masque", "sheet mask", "clay mask", "peel off", "sleeping mask"],
+  retinol: ["retinol", "retinoid", "retinal", "tretinoin", "retin-a"],
   prescription: ["prescription", "tretinoin", "clindamycin", "adapalene", "benzoyl", "tazarotene", "spironolactone"],
 };
 
@@ -17,7 +17,8 @@ function matchesCategory(product: { name?: string; brand?: string; ingredients?:
   if (!category) return true;
   const keywords = CATEGORY_KEYWORDS[category];
   if (!keywords) return true;
-  const haystack = [product.name, product.brand, product.ingredients].filter(Boolean).join(" ").toLowerCase();
+  // Only check product name — not brand or ingredients — to avoid false matches (e.g. "Vanicream" matching "cream")
+  const haystack = (product.name || "").toLowerCase();
   return keywords.some((kw) => haystack.includes(kw));
 }
 
