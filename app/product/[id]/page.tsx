@@ -305,12 +305,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </div>
           ) : (
             <div className="bg-white rounded-2xl p-6 border border-stone-100 text-center mb-6">
-              <p className="text-stone-400 text-sm">Ingredient list not available for this product.</p>
-              {product.url && (
-                <a href={product.url} target="_blank" rel="noopener noreferrer" className="text-sm mt-2 inline-block" style={{ color: "#8B4513" }}>
-                  View on {product.source} →
-                </a>
-              )}
+              <p className="text-stone-400 text-sm">Ingredient list not yet available for this product.</p>
             </div>
           )}
 

@@ -232,16 +232,6 @@ function SearchPageInner() {
                         {addingId === product.id ? "Adding..." : "+ Add to Log"}
                       </button>
                     )}
-                    {product.url && (
-                      <a
-                        href={product.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 rounded-full text-xs font-medium text-stone-600 border border-stone-200 text-center hover:bg-stone-50"
-                      >
-                        View
-                      </a>
-                    )}
                   </div>
                 </div>
               </div>
