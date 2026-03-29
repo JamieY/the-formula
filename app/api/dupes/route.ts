@@ -86,14 +86,14 @@ async function findCandidates(query: string, category?: string): Promise<any[]> 
     })
     .sort((a, b) => b._score - a._score);
 
-  // Apply category filter if provided
+  // If category provided, boost matching products to top but never hide others
   if (category && CATEGORY_KEYWORDS[category]) {
     const kws = CATEGORY_KEYWORDS[category];
-    const filtered = candidates.filter((p) => {
-      const nameLower = p.name.toLowerCase();
-      return kws.some((kw) => nameLower.includes(kw));
+    candidates.sort((a, b) => {
+      const aMatch = kws.some((kw) => a.name.toLowerCase().includes(kw)) ? 1 : 0;
+      const bMatch = kws.some((kw) => b.name.toLowerCase().includes(kw)) ? 1 : 0;
+      return bMatch - aMatch;
     });
-    if (filtered.length > 0) candidates = filtered;
   }
 
   return candidates;
