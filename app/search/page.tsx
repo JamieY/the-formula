@@ -29,12 +29,6 @@ const CATEGORIES = [
   { label: "Prescription", value: "prescription" },
 ];
 
-const SOURCE_COLORS: Record<string, string> = {
-  "Sephora": "#8B4513",
-  "Ulta": "#7B2D8B",
-  "Open Beauty Facts": "#6B7280",
-  "INCIDecoder": "#5B7B5B",
-};
 
 function SearchPageInner() {
   const searchParams = useSearchParams();
@@ -207,12 +201,6 @@ function SearchPageInner() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-stone-500">{results.length} products found</p>
-              <div className="flex items-center gap-3 text-xs text-stone-400">
-                {sources.sephora > 0 && <span>{sources.sephora} Sephora</span>}
-                {sources.ulta > 0 && <span>{sources.ulta} Ulta</span>}
-                {sources.openBeautyFacts > 0 && <span>{sources.openBeautyFacts} Open Beauty Facts</span>}
-                {sources.inciDecoder > 0 && <span>{sources.inciDecoder} INCIDecoder</span>}
-              </div>
             </div>
 
             {visible.map((product) => (
@@ -230,14 +218,6 @@ function SearchPageInner() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="text-xs font-semibold tracking-widest uppercase text-stone-400">{product.brand}</p>
-                      {product.source && (
-                        <span
-                          className="text-xs px-2 py-0.5 rounded-full text-white"
-                          style={{ backgroundColor: SOURCE_COLORS[product.source] || "#9CA3AF" }}
-                        >
-                          {product.source}
-                        </span>
-                      )}
                     </div>
                     <p className="font-semibold text-stone-800 mb-1">{product.name}</p>
                     {product.price && (

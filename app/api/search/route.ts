@@ -230,25 +230,16 @@ export async function GET(request: NextRequest) {
     const sephoraResults: any[] = [];
     const ultaResults: any[] = [];
 
-    // Merge — deduplicate by name similarity
+    // Merge — deduplicate by normalized name
+    const normalize = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+
     const seen = new Set<string>();
     const combined: any[] = [];
 
-    for (const p of sephoraResults) {
-      const key = p.name.toLowerCase().slice(0, 20);
-      if (!seen.has(key)) { seen.add(key); combined.push(p); }
-    }
-    for (const p of ultaResults) {
-      const key = p.name.toLowerCase().slice(0, 20);
-      if (!seen.has(key)) { seen.add(key); combined.push(p); }
-    }
-    for (const p of obfResults) {
-      const key = p.name.toLowerCase().slice(0, 20);
-      if (!seen.has(key)) { seen.add(key); combined.push(p); }
-    }
-    for (const p of inciResults) {
-      const key = p.name.toLowerCase().slice(0, 20);
-      if (!seen.has(key)) { seen.add(key); combined.push(p); }
+    for (const p of [...sephoraResults, ...ultaResults, ...obfResults, ...inciResults]) {
+      const key = normalize(p.name);
+      if (key && !seen.has(key)) { seen.add(key); combined.push(p); }
     }
 
     // Apply category filter using keyword expansion
