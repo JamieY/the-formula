@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 interface Product {
@@ -29,12 +30,16 @@ const CATEGORIES = [
 
 const SOURCE_COLORS: Record<string, string> = {
   "Sephora": "#8B4513",
+  "Ulta": "#7B2D8B",
   "Open Beauty Facts": "#6B7280",
   "INCIDecoder": "#5B7B5B",
 };
 
-export default function SearchPage() {
-  const [query, setQuery] = useState("");
+function SearchPageInner() {
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams.get("q") || "";
+
+  const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,15 +47,14 @@ export default function SearchPage() {
   const [showAll, setShowAll] = useState(false);
   const [sources, setSources] = useState<Record<string, number>>({});
 
-  const search = async (cat?: string) => {
-    if (!query.trim()) return;
+  const search = async (q: string, cat: string) => {
+    if (!q.trim()) return;
     setLoading(true);
     setSearched(true);
     setShowAll(false);
-    const activeCat = cat !== undefined ? cat : category;
     try {
-      const params = new URLSearchParams({ q: query });
-      if (activeCat) params.set("category", activeCat);
+      const params = new URLSearchParams({ q });
+      if (cat) params.set("category", cat);
       const res = await fetch(`/api/search?${params.toString()}`);
       const data = await res.json();
       setResults(data.products || []);
@@ -62,9 +66,14 @@ export default function SearchPage() {
     }
   };
 
+  // Auto-search if arriving from home page with ?q=
+  useEffect(() => {
+    if (initialQuery) search(initialQuery, "");
+  }, [initialQuery]);
+
   const handleCategoryChange = (cat: string) => {
     setCategory(cat);
-    if (searched) search(cat);
+    if (searched) search(query, cat);
   };
 
   const visible = showAll ? results : results.slice(0, 6);
@@ -103,13 +112,13 @@ export default function SearchPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && search()}
+              onKeyDown={(e) => e.key === "Enter" && search(query, category)}
               placeholder="Search by brand or product name..."
               className="flex-1 bg-transparent outline-none text-stone-700 placeholder-stone-400"
             />
           </div>
           <button
-            onClick={() => search()}
+            onClick={() => search(query, category)}
             className="px-6 py-3 rounded-full text-white font-medium text-sm flex-shrink-0"
             style={{ backgroundColor: "#8B4513" }}
           >
@@ -139,7 +148,7 @@ export default function SearchPage() {
         {loading && (
           <div className="text-center py-12">
             <div className="inline-block w-8 h-8 border-2 border-stone-300 border-t-stone-600 rounded-full animate-spin mb-3" />
-            <p className="text-stone-500 text-sm">Searching Sephora, Open Beauty Facts, and more...</p>
+            <p className="text-stone-500 text-sm">Searching Sephora, Ulta, Open Beauty Facts, and more...</p>
           </div>
         )}
 
@@ -153,13 +162,13 @@ export default function SearchPage() {
         {/* Results */}
         {!loading && results.length > 0 && (
           <div className="flex flex-col gap-4">
-            {/* Result meta */}
             <div className="flex items-center justify-between">
               <p className="text-sm text-stone-500">{results.length} products found</p>
               <div className="flex items-center gap-3 text-xs text-stone-400">
-                {sources.sephora > 0 && <span>{sources.sephora} from Sephora</span>}
-                {sources.openBeautyFacts > 0 && <span>{sources.openBeautyFacts} from Open Beauty Facts</span>}
-                {sources.inciDecoder > 0 && <span>{sources.inciDecoder} from INCIDecoder</span>}
+                {sources.sephora > 0 && <span>{sources.sephora} Sephora</span>}
+                {sources.ulta > 0 && <span>{sources.ulta} Ulta</span>}
+                {sources.openBeautyFacts > 0 && <span>{sources.openBeautyFacts} Open Beauty Facts</span>}
+                {sources.inciDecoder > 0 && <span>{sources.inciDecoder} INCIDecoder</span>}
               </div>
             </div>
 
@@ -231,5 +240,13 @@ export default function SearchPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense>
+      <SearchPageInner />
+    </Suspense>
   );
 }
