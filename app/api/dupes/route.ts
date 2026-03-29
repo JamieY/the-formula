@@ -27,6 +27,19 @@ function normalize(str: string) {
   return str.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
 }
 
+// Real ingredient lists have multiple comma-separated items with recognizable chemical/botanical words
+function isRealIngredientList(text: string): boolean {
+  if (!text || text.length < 20) return false;
+  const parts = text.split(",");
+  if (parts.length < 3) return false;
+  // Should have at least a few parts that look like real ingredient words (not codes/numbers)
+  const realWords = parts.filter((p) => {
+    const t = p.trim();
+    return t.length > 3 && /[a-zA-Z]{3,}/.test(t) && !/^\d+$/.test(t);
+  });
+  return realWords.length >= 3;
+}
+
 // Find best matching product in our DB by query string
 async function findTarget(query: string) {
   const words = normalize(query).split(" ").filter((w) => w.length > 2);
@@ -37,20 +50,23 @@ async function findTarget(query: string) {
     .from("products")
     .select("id, name, brand, image, ingredients, external_id")
     .not("ingredients", "is", null)
-    .or(words.map((w) => `name.ilike.%${w}%`).join(","))
-    .limit(20);
+    .or(words.map((w) => `name.ilike.%${w}%,brand.ilike.%${w}%`).join(","))
+    .limit(50);
 
   if (!data || data.length === 0) return null;
 
-  // Score each result by how many query words appear in name+brand
+  // Filter to only products with real ingredient lists, then score by name match
   const queryNorm = normalize(query);
-  const scored = data.map((p) => {
-    const combined = normalize(`${p.brand} ${p.name}`);
-    const matchCount = words.filter((w) => combined.includes(w)).length;
-    const exactBonus = combined.includes(queryNorm) ? 10 : 0;
-    return { ...p, _score: matchCount + exactBonus };
-  });
+  const scored = data
+    .filter((p) => isRealIngredientList(p.ingredients))
+    .map((p) => {
+      const combined = normalize(`${p.brand} ${p.name}`);
+      const matchCount = words.filter((w) => combined.includes(w)).length;
+      const exactBonus = combined.includes(queryNorm) ? 10 : 0;
+      return { ...p, _score: matchCount + exactBonus };
+    });
 
+  if (scored.length === 0) return null;
   scored.sort((a, b) => b._score - a._score);
   return scored[0];
 }
@@ -70,17 +86,41 @@ export async function GET(request: NextRequest) {
     const targetIngredients = parseIngredients(target.ingredients);
     const targetBrandNorm = normalize(target.brand || "");
 
-    // Step 2: pull a large comparison pool — products from other brands with ingredients
-    // Use key ingredients from target to find similar products efficiently
-    const topIngredients = [...targetIngredients].slice(0, 5); // first 5 ingredients are most significant
+    // Step 2: pull a large comparison pool
+    // Use key ingredients from target (skip very short/common ones)
+    const topIngredients = [...targetIngredients]
+      .filter((ing) => ing.length > 4)
+      .slice(0, 6);
 
-    const { data: pool } = await supabase
-      .from("products")
-      .select("id, name, brand, image, ingredients, external_id")
-      .not("ingredients", "is", null)
-      .neq("id", target.id)
-      .or(topIngredients.map((ing) => `ingredients.ilike.%${ing}%`).join(","))
-      .limit(300);
+    let pool: any[] = [];
+
+    if (topIngredients.length > 0) {
+      const { data: ingredientPool } = await supabase
+        .from("products")
+        .select("id, name, brand, image, ingredients, external_id")
+        .not("ingredients", "is", null)
+        .neq("id", target.id)
+        .or(topIngredients.map((ing) => `ingredients.ilike.%${ing}%`).join(","))
+        .limit(300);
+      pool = (ingredientPool || []).filter((p) => isRealIngredientList(p.ingredients));
+    }
+
+    // Fallback: if pool is too small, grab a broader set filtered by brand exclusion
+    if (pool.length < 20) {
+      const { data: broadPool } = await supabase
+        .from("products")
+        .select("id, name, brand, image, ingredients, external_id")
+        .not("ingredients", "is", null)
+        .neq("id", target.id)
+        .not("brand", "ilike", `%${target.brand.split(" ")[0]}%`)
+        .limit(500);
+      const broad = (broadPool || []).filter((p) => isRealIngredientList(p.ingredients));
+      // Merge, deduplicate
+      const seen = new Set(pool.map((p) => p.id));
+      for (const p of broad) {
+        if (!seen.has(p.id)) { pool.push(p); seen.add(p.id); }
+      }
+    }
 
     if (!pool || pool.length === 0) {
       return NextResponse.json({
