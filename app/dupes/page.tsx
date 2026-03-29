@@ -114,7 +114,7 @@ function DupeDetectorInner() {
         </p>
 
         {/* Search bar + filters */}
-        <div className="max-w-2xl mx-auto mb-10">
+        <div className="mb-10">
           <div className="flex gap-3 mb-3">
             <div className="flex-1 flex items-center gap-3 bg-white rounded-full px-6 py-4 shadow-sm border border-stone-200">
               <svg className="w-5 h-5 text-stone-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
