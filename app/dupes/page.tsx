@@ -40,11 +40,12 @@ function DupeDetectorInner() {
   const [candidates, setCandidates] = useState<Product[]>([]);
   const router = useRouter();
 
-  useEffect(() => { if (initialQuery) search(); }, [initialQuery]);
-  useEffect(() => { if (searched) search(); }, [category]);
+  useEffect(() => { if (initialQuery) search(undefined, ""); }, [initialQuery]);
+  useEffect(() => { if (searched) search(undefined, category); }, [category]);
 
-  const search = async (overrideQuery?: string) => {
+  const search = async (overrideQuery?: string, overrideCategory?: string) => {
     const q = overrideQuery ?? query;
+    const cat = overrideCategory !== undefined ? overrideCategory : category;
     if (!q.trim()) return;
     setLoading(true);
     setSearched(true);
@@ -53,7 +54,7 @@ function DupeDetectorInner() {
     setDupes([]);
     try {
       const params = new URLSearchParams({ q });
-      if (category) params.set("category", category);
+      if (cat) params.set("category", cat);
       const res = await fetch(`/api/dupes?${params}`);
       const data = await res.json();
       if (data.candidates?.length > 0) {

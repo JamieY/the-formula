@@ -20,7 +20,9 @@ function similarityScore(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0;
   const intersection = [...a].filter((x) => b.has(x)).length;
   const union = new Set([...a, ...b]).size;
-  return Math.round((intersection / union) * 100);
+  const jaccard = intersection / union;
+  const overlap = intersection / Math.min(a.size, b.size);
+  return Math.round(((jaccard + overlap) / 2) * 100);
 }
 
 function normalize(str: string) {
