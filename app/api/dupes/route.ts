@@ -192,18 +192,37 @@ export async function GET(request: NextRequest) {
     const targetIngredients = parseIngredients(target.ingredients);
     const targetBrandNorm = normalize(target.brand || "");
 
+    // Auto-detect the target's category from its name so we match like-for-like
+    const targetNameLower = target.name.toLowerCase();
+    let detectedCategory: string | null = null;
+    for (const [cat, kws] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (kws.some((kw) => targetNameLower.includes(kw))) {
+        detectedCategory = cat;
+        break;
+      }
+    }
+    // Respect user-selected category over auto-detected
+    const effectiveCategory = category || detectedCategory;
+
     // Build comparison pool from ingredient overlap
-    const topIngredients = [...targetIngredients].filter((ing) => ing.length > 4).slice(0, 6);
+    // Use less-common ingredients (skip short/ubiquitous ones) for better targeting
+    const topIngredients = [...targetIngredients]
+      .filter((ing) => ing.length > 5 && !["water", "glycerin", "glycerol", "aqua"].includes(ing))
+      .slice(0, 8);
+    // Fall back to all ingredients > 4 chars if too few specific ones
+    const poolIngredients = topIngredients.length >= 3
+      ? topIngredients
+      : [...targetIngredients].filter((ing) => ing.length > 4).slice(0, 6);
 
     let pool: any[] = [];
-    if (topIngredients.length > 0) {
+    if (poolIngredients.length > 0) {
       const { data: ingredientPool } = await supabase
         .from("products")
         .select("id, name, brand, image, ingredients, external_id")
         .not("ingredients", "is", null)
         .neq("id", target.id)
-        .or(topIngredients.map((ing) => `ingredients.ilike.%${ing}%`).join(","))
-        .limit(300);
+        .or(poolIngredients.map((ing) => `ingredients.ilike.%${ing}%`).join(","))
+        .limit(400);
       pool = (ingredientPool || []).filter((p) => isRealIngredientList(p.ingredients));
     }
 
@@ -221,6 +240,18 @@ export async function GET(request: NextRequest) {
       for (const p of broad) {
         if (!seen.has(p.id)) { pool.push(p); seen.add(p.id); }
       }
+    }
+
+    // Filter pool by category (same-type products only) — fall back if too few
+    if (effectiveCategory && CATEGORY_KEYWORDS[effectiveCategory]) {
+      const catKws = CATEGORY_KEYWORDS[effectiveCategory];
+      const catExcludes = CATEGORY_EXCLUDES[effectiveCategory] || [];
+      const catFiltered = pool.filter((p) => {
+        const nameLower = p.name.toLowerCase();
+        return catKws.some((kw) => nameLower.includes(kw)) &&
+               !catExcludes.some((ex) => nameLower.includes(ex));
+      });
+      if (catFiltered.length >= 5) pool = catFiltered;
     }
 
     const scored = pool
