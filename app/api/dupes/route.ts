@@ -45,13 +45,30 @@ async function findTarget(query: string) {
   const words = normalize(query).split(" ").filter((w) => w.length > 2);
   if (words.length === 0) return null;
 
-  // Try full-text search across name + brand
-  const { data } = await supabase
+  // Search name + brand fields separately and merge
+  const nameQuery = supabase
     .from("products")
     .select("id, name, brand, image, ingredients, external_id")
     .not("ingredients", "is", null)
-    .or(words.map((w) => `name.ilike.%${w}%,brand.ilike.%${w}%`).join(","))
-    .limit(50);
+    .or(words.map((w) => `name.ilike.%${w}%`).join(","))
+    .limit(30);
+
+  const brandQuery = supabase
+    .from("products")
+    .select("id, name, brand, image, ingredients, external_id")
+    .not("ingredients", "is", null)
+    .or(words.map((w) => `brand.ilike.%${w}%`).join(","))
+    .limit(30);
+
+  const [{ data: nameResults }, { data: brandResults }] = await Promise.all([nameQuery, brandQuery]);
+
+  // Merge and deduplicate
+  const seen = new Set<string>();
+  const merged: any[] = [];
+  for (const p of [...(nameResults || []), ...(brandResults || [])]) {
+    if (!seen.has(p.id)) { seen.add(p.id); merged.push(p); }
+  }
+  const data = merged;
 
   if (!data || data.length === 0) return null;
 
