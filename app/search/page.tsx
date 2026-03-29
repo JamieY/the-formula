@@ -24,6 +24,7 @@ const CATEGORIES = [
   { label: "Eye Cream", value: "eye" },
   { label: "Mask", value: "mask" },
   { label: "Retinol", value: "retinol" },
+  { label: "Prescription", value: "prescription" },
 ];
 
 const SOURCE_COLORS: Record<string, string> = {
@@ -117,7 +118,7 @@ export default function SearchPage() {
         </div>
 
         {/* Category filters */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap justify-center gap-2 mb-8">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.value}
