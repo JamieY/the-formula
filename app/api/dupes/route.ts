@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           target: null,
           dupes: [],
-          candidates: candidates.slice(0, 10).map((p) => ({
+          candidates: candidates.slice(0, 25).sort((a, b) => a.name.localeCompare(b.name)).map((p) => ({
             id: p.external_id || p.id,
             name: p.name,
             brand: p.brand,

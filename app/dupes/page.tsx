@@ -41,6 +41,7 @@ function DupeDetectorInner() {
   const router = useRouter();
 
   useEffect(() => { if (initialQuery) search(); }, [initialQuery]);
+  useEffect(() => { if (searched) search(); }, [category]);
 
   const search = async (overrideQuery?: string) => {
     const q = overrideQuery ?? query;
