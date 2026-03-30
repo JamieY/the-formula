@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import NavBar from "@/app/components/NavBar";
@@ -42,6 +42,7 @@ function DupeDetectorInner() {
   const [noIngredients, setNoIngredients] = useState(false);
   const [candidates, setCandidates] = useState<Product[]>([]);
   const router = useRouter();
+  const lastSearchedRef = useRef("");
 
   useEffect(() => {
     if (initialId) {
@@ -58,8 +59,8 @@ function DupeDetectorInner() {
         })
         .catch(() => {})
         .finally(() => setLoading(false));
-    } else if (initialQuery) {
-      search(undefined, "");
+    } else if (initialQuery && initialQuery !== lastSearchedRef.current) {
+      search(initialQuery, "");
     }
   }, [initialId, initialQuery]);
   useEffect(() => { if (searched) search(undefined, category); }, [category]);
@@ -68,6 +69,12 @@ function DupeDetectorInner() {
     const q = overrideQuery ?? query;
     const cat = overrideCategory !== undefined ? overrideCategory : category;
     if (!q.trim()) return;
+    lastSearchedRef.current = q;
+
+    // Sync URL so back button restores results
+    const params = new URLSearchParams({ q });
+    if (cat) params.set("category", cat);
+    router.replace(`/dupes?${params.toString()}`, { scroll: false });
     setLoading(true);
     setSearched(true);
     setCandidates([]);
@@ -75,8 +82,6 @@ function DupeDetectorInner() {
     setDupes([]);
     setNoIngredients(false);
     try {
-      const params = new URLSearchParams({ q });
-      if (cat) params.set("category", cat);
       const res = await fetch(`/api/dupes?${params}`);
       const data = await res.json();
       if (data.candidates?.length > 0) {
