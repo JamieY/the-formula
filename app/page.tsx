@@ -179,14 +179,14 @@ export default function Home() {
                 cta: "View my log",
               },
             ].map((f) => (
-              <div key={f.title} className="bg-white rounded-2xl p-8 shadow-sm flex flex-col">
+              <Link key={f.title} href={f.href} className="bg-white rounded-2xl p-8 shadow-sm flex flex-col hover:shadow-md transition-shadow">
                 <span className="text-3xl mb-4">{f.icon}</span>
                 <h3 className="font-semibold text-lg mb-2" style={{ color: "#2C2C2C" }}>{f.title}</h3>
                 <p className="text-stone-500 text-sm leading-relaxed mb-6 flex-1">{f.desc}</p>
-                <Link href={f.href} className="text-sm font-medium" style={{ color: "#8B4513" }}>
+                <span className="text-sm font-medium" style={{ color: "#8B4513" }}>
                   {f.cta} →
-                </Link>
-              </div>
+                </span>
+              </Link>
             ))}
           </div>
         </div>
