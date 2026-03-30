@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, type ProductStatus, STATUS_LABELS, formatProductName, formatIngredients } from "@/lib/supabase";
@@ -47,15 +47,22 @@ function SearchPageInner() {
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const [statusPicker, setStatusPicker] = useState<{ product: Product } | null>(null);
   const router = useRouter();
+  // Track the last query we triggered manually so the URL-sync effect doesn't double-fetch
+  const lastSearchedRef = useRef("");
 
   const search = async (q: string, cat: string) => {
     if (!q.trim()) return;
+    lastSearchedRef.current = q;
+
+    // Sync URL so the browser back button restores results
+    const params = new URLSearchParams({ q });
+    if (cat) params.set("category", cat);
+    router.replace(`/search?${params.toString()}`, { scroll: false });
+
     setLoading(true);
     setSearched(true);
     setShowAll(false);
     try {
-      const params = new URLSearchParams({ q });
-      if (cat) params.set("category", cat);
       const res = await fetch(`/api/search?${params.toString()}`);
       const data = await res.json();
       setResults(data.products || []);
@@ -67,9 +74,11 @@ function SearchPageInner() {
     }
   };
 
-  // Auto-search if arriving from home page with ?q=
+  // Run search when URL has ?q= (page load, back navigation, or link from home)
   useEffect(() => {
-    if (initialQuery) search(initialQuery, "");
+    if (initialQuery && initialQuery !== lastSearchedRef.current) {
+      search(initialQuery, "");
+    }
   }, [initialQuery]);
 
   const handleCategoryChange = (cat: string) => {
