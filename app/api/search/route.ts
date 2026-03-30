@@ -43,26 +43,57 @@ export async function GET(request: NextRequest) {
   const words = query.trim().toLowerCase().split(/\s+/).filter((w) => w.length > 1);
   if (words.length === 0) return NextResponse.json({ products: [] });
 
+  // Distinctive words (not common category terms) for a high-precision first pass
+  const GENERIC_WORDS = new Set([
+    "moisturizer", "moisturizing", "moisturising", "moisture", "moisturize",
+    "cream", "lotion", "hydrating", "hydration", "hydro",
+    "cleanser", "cleansing", "wash", "foaming", "scrub",
+    "serum", "essence", "ampoule", "booster", "concentrate",
+    "sunscreen", "sunblock", "protection",
+    "toner", "toning", "mist", "softener",
+    "treatment", "repair", "mask",
+    "face", "skin", "skincare", "care", "daily", "gentle",
+  ]);
+  const specificWords = words.filter((w) => !GENERIC_WORDS.has(w));
+
   try {
-    // Search our DB by name and brand
-    const [{ data: nameResults }, { data: brandResults }] = await Promise.all([
+    // High-precision query with distinctive words first (prevents generic terms from crowding out specific matches)
+    const precisePromises = specificWords.length >= 1 ? [
+      supabase
+        .from("products")
+        .select("id, external_id, name, brand, ingredients, image")
+        .or(specificWords.map((w) => `name.ilike.%${w}%`).join(","))
+        .limit(100) as any,
+      supabase
+        .from("products")
+        .select("id, external_id, name, brand, ingredients, image")
+        .or(specificWords.map((w) => `brand.ilike.%${w}%`).join(","))
+        .limit(100) as any,
+    ] : [];
+
+    // Broad fallback with all words
+    const broadPromises = [
       supabase
         .from("products")
         .select("id, external_id, name, brand, ingredients, image")
         .or(words.map((w) => `name.ilike.%${w}%`).join(","))
-        .limit(60),
+        .limit(60) as any,
       supabase
         .from("products")
         .select("id, external_id, name, brand, ingredients, image")
         .or(words.map((w) => `brand.ilike.%${w}%`).join(","))
-        .limit(40),
-    ]);
+        .limit(40) as any,
+    ];
+
+    const allResults = await Promise.all([...precisePromises, ...broadPromises]);
 
     // Merge and deduplicate
     const seen = new Set<string>();
     const merged: any[] = [];
-    for (const p of [...(nameResults || []), ...(brandResults || [])]) {
-      if (!seen.has(p.id)) { seen.add(p.id); merged.push(p); }
+    for (const { data } of allResults) {
+      for (const p of (data || [])) {
+        if (!seen.has(p.id)) { seen.add(p.id); merged.push(p); }
+      }
     }
 
     // Score by word match count

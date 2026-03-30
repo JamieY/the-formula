@@ -61,28 +61,67 @@ const CATEGORY_EXCLUDES: Record<string, string[]> = {
   mask: ["hair", "shampoo", "conditioner", "body wash", "hand"],
 };
 
+// Words that appear in many product names and pollute search results when used as OR terms.
+// These are used to split a query into "specific" (distinctive) vs "generic" (category-level) words.
+const GENERIC_QUERY_WORDS = new Set([
+  "moisturizer", "moisturizing", "moisturising", "moisture", "moisturize",
+  "cream", "lotion", "hydrating", "hydration", "hydro",
+  "cleanser", "cleansing", "wash", "foaming", "scrub",
+  "serum", "essence", "ampoule", "booster", "concentrate",
+  "sunscreen", "sunblock", "protection",
+  "toner", "toning", "mist", "softener",
+  "treatment", "repair", "mask",
+  "face", "skin", "skincare", "care", "daily", "gentle",
+]);
+
 async function findCandidates(query: string, category?: string): Promise<any[]> {
   const words = normalize(query).split(" ").filter((w) => w.length > 2);
   if (words.length === 0) return [];
 
-  const nameQuery = supabase
-    .from("products")
-    .select("id, name, brand, image, ingredients, external_id")
-    .or(words.map((w) => `name.ilike.%${w}%`).join(","))
-    .limit(60);
+  // Specific (distinctive) words — not common category terms
+  const specificWords = words.filter((w) => !GENERIC_QUERY_WORDS.has(w));
 
-  const brandQuery = supabase
-    .from("products")
-    .select("id, name, brand, image, ingredients, external_id")
-    .or(words.map((w) => `brand.ilike.%${w}%`).join(","))
-    .limit(60);
+  // Run a high-precision query with only distinctive words first.
+  // This ensures brand-specific products (e.g. "Clearstem Hydraberry") always appear
+  // in the result set even when the query also contains generic words like "moisture" or "mask".
+  const precisePromises: Promise<{ data: any[] | null }>[] = [];
+  if (specificWords.length >= 1) {
+    precisePromises.push(
+      supabase
+        .from("products")
+        .select("id, name, brand, image, ingredients, external_id")
+        .or(specificWords.map((w) => `name.ilike.%${w}%`).join(","))
+        .limit(100) as any,
+      supabase
+        .from("products")
+        .select("id, name, brand, image, ingredients, external_id")
+        .or(specificWords.map((w) => `brand.ilike.%${w}%`).join(","))
+        .limit(100) as any,
+    );
+  }
 
-  const [{ data: nameResults }, { data: brandResults }] = await Promise.all([nameQuery, brandQuery]);
+  // Broad fallback with all words (catches products whose only matching terms are generic)
+  const broadPromises = [
+    supabase
+      .from("products")
+      .select("id, name, brand, image, ingredients, external_id")
+      .or(words.map((w) => `name.ilike.%${w}%`).join(","))
+      .limit(60) as any,
+    supabase
+      .from("products")
+      .select("id, name, brand, image, ingredients, external_id")
+      .or(words.map((w) => `brand.ilike.%${w}%`).join(","))
+      .limit(60) as any,
+  ];
+
+  const allResults = await Promise.all([...precisePromises, ...broadPromises]);
 
   const seen = new Set<string>();
   const merged: any[] = [];
-  for (const p of [...(nameResults || []), ...(brandResults || [])]) {
-    if (!seen.has(p.id)) { seen.add(p.id); merged.push(p); }
+  for (const { data } of allResults) {
+    for (const p of (data || [])) {
+      if (!seen.has(p.id)) { seen.add(p.id); merged.push(p); }
+    }
   }
 
   const queryNorm = normalize(query);
@@ -163,7 +202,7 @@ export async function GET(request: NextRequest) {
       // product only because both names contain "spf50")
       const top = candidates[0];
       const rawMatchCount = top._score - (isRealIngredientList(top.ingredients) ? 5 : 0);
-      const minRequired = words.length >= 3 ? 2 : 1;
+      const minRequired = queryWords.length >= 3 ? 2 : 1;
       if (rawMatchCount < minRequired) {
         return NextResponse.json({ target: null, dupes: [], candidates: [] });
       }
