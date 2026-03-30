@@ -123,9 +123,10 @@ async function buildOBFIndex() {
     const fields = parseCSVLine(line);
     const row = Object.fromEntries(headers.map((h, i) => [h, fields[i] || ""]));
 
-    const name = row["product_name"] || row["product_name_en"] || "";
+    const name = row["product_name_en"] || row["product_name"] || "";
     const brands = row["brands"] || "";
-    const ingredients = row["ingredients_text"] || row["ingredients_text_en"] || "";
+    // Prefer English ingredients; skip if only non-English is available
+    const ingredients = row["ingredients_text_en"] || "";
 
     if (name && ingredients && ingredients.length > 30 && ingredients.includes(",")) {
       index.push({ name: normalize(name), brands: normalize(brands), rawBrands: brands, rawName: name, ingredients });
