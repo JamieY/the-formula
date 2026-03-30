@@ -215,7 +215,7 @@ function DupeDetectorInner() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{p.brand}</p>
-                    <p className="font-semibold text-stone-800 truncate">{formatProductName(p.name)}</p>
+                    <p className="font-semibold text-stone-800 truncate">{formatProductName(p.name, p.brand)}</p>
                     <p className="text-xs text-stone-400 mt-0.5 line-clamp-1">{fmtIngredients(p.ingredients)}</p>
                   </div>
                   <svg className="w-5 h-5 text-stone-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -239,7 +239,7 @@ function DupeDetectorInner() {
           <div>
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 mb-6">
               <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{target.brand}</p>
-              <p className="font-semibold text-stone-800">{formatProductName(target.name)}</p>
+              <p className="font-semibold text-stone-800">{formatProductName(target.name, target.brand)}</p>
               {target.ingredients && <p className="text-xs text-stone-400 mt-1 line-clamp-2">{fmtIngredients(target.ingredients)}</p>}
             </div>
             {noIngredients ? (
@@ -271,7 +271,7 @@ function DupeDetectorInner() {
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{target.brand}</p>
-                  <p className="font-semibold text-stone-800 truncate">{formatProductName(target.name)}</p>
+                  <p className="font-semibold text-stone-800 truncate">{formatProductName(target.name, target.brand)}</p>
                   <p className="text-xs text-stone-400 mt-0.5 line-clamp-1">{fmtIngredients(target.ingredients)}</p>
                 </div>
               </div>
@@ -297,7 +297,7 @@ function DupeDetectorInner() {
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{dupe.brand}</p>
-                      <p className="font-semibold text-stone-800 truncate">{formatProductName(dupe.name)}</p>
+                      <p className="font-semibold text-stone-800 truncate">{formatProductName(dupe.name, dupe.brand)}</p>
                       <p className="text-xs mt-1 font-medium" style={{ color: colors.text }}>{scoreLabel(dupe.score)}</p>
                     </div>
                     <div

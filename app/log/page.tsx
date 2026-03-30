@@ -160,7 +160,7 @@ export default function MyLog() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-semibold tracking-widest uppercase text-stone-400 mb-0.5">{entry.products.brand}</p>
-                  <p className="font-semibold text-stone-800 mb-1">{formatProductName(entry.products.name)}</p>
+                  <p className="font-semibold text-stone-800 mb-1">{formatProductName(entry.products.name, entry.products.brand)}</p>
                   {entry.note && <p className="text-sm text-stone-500 truncate">{entry.note}</p>}
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0" onClick={(e) => e.stopPropagation()}>

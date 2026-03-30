@@ -261,7 +261,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         {/* Right column — details + ingredients */}
         <div>
           <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: "#8B4513" }}>{product.brand}</p>
-          <h1 className="text-2xl md:text-3xl font-serif font-semibold mb-2" style={{ color: "#2C2C2C" }}>{formatProductName(product.name)}</h1>
+          <h1 className="text-2xl md:text-3xl font-serif font-semibold mb-2" style={{ color: "#2C2C2C" }}>{formatProductName(product.name, product.brand)}</h1>
 
           {product.price && (
             <p className="text-stone-500 text-sm mb-4">{product.price}</p>
@@ -364,7 +364,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-6" onClick={() => setShowStatusPicker(false)}>
           <div className="bg-white rounded-3xl p-8 shadow-xl max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-serif font-semibold text-xl mb-1" style={{ color: "#2C2C2C" }}>Add to Log</h2>
-            <p className="text-stone-500 text-sm mb-6 truncate">{formatProductName(product.name)}</p>
+            <p className="text-stone-500 text-sm mb-6 truncate">{formatProductName(product.name, product.brand)}</p>
             <div className="flex flex-col gap-3">
               {(Object.keys(STATUS_LABELS) as ProductStatus[]).map((status) => (
                 <button
@@ -476,7 +476,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               <>
                 <h2 className="font-serif font-semibold text-xl mb-1" style={{ color: "#2C2C2C" }}>Report Formula Change</h2>
                 <p className="text-stone-500 text-sm mb-5">
-                  Has the formula for <span className="font-medium text-stone-700">{formatProductName(product.name)}</span> changed? Let us know and we'll refresh the ingredient data.
+                  Has the formula for <span className="font-medium text-stone-700">{formatProductName(product.name, product.brand)}</span> changed? Let us know and we'll refresh the ingredient data.
                 </p>
                 <textarea
                   value={flagNote}

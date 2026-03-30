@@ -207,7 +207,7 @@ function SearchPageInner() {
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="text-xs font-semibold tracking-widest uppercase text-stone-400">{product.brand}</p>
                     </div>
-                    <p className="font-semibold text-stone-800 mb-1">{formatProductName(product.name)}</p>
+                    <p className="font-semibold text-stone-800 mb-1">{formatProductName(product.name, product.brand)}</p>
                     {product.price && (
                       <p className="text-xs text-stone-500 mb-1">{product.price}</p>
                     )}

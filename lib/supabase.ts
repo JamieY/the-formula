@@ -22,10 +22,18 @@ export const STATUS_LABELS: Record<ProductStatus, string> = {
 };
 
 // Normalizes product names from imported datasets.
-// ALL-CAPS names (common in OBF) → title case; otherwise → ensure first letter is capitalized.
-export function formatProductName(name: string): string {
+// Strips leading brand prefix if present, converts ALL-CAPS to title case,
+// and ensures the first letter is capitalized.
+export function formatProductName(name: string, brand?: string): string {
   if (!name) return name;
-  const t = name.trim();
+  let t = name.trim();
+  if (brand) {
+    const b = brand.trim().toLowerCase();
+    if (t.toLowerCase().startsWith(b)) {
+      t = t.slice(b.length).replace(/^[\s\-–—:,]+/, "").trim();
+    }
+  }
+  if (!t) return name.trim();
   if (t === t.toUpperCase() && /[A-Z]/.test(t)) {
     return t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   }
