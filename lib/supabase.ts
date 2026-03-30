@@ -52,7 +52,9 @@ export function formatProductName(name: string, brand?: string): string {
   }
   if (!t) return name.trim();
   // Title-case every word (handles all-lowercase, ALL-CAPS, and mixed input)
-  return t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  const titled = t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  // Restore known all-caps abbreviations that are standalone words (not inside another word)
+  return titled.replace(/\b(Am|Pm|Spf|Aha|Bha|Pha|Uva|Uvb|Uvc|Cbd|Dna|Rna|Roc|La|Ph)\b/g, (m) => m.toUpperCase());
 }
 
 export const STATUS_COLORS: Record<ProductStatus, string> = {
