@@ -65,7 +65,7 @@ export default function SignUp() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Jamie Yachera"
+                  placeholder="First Last"
                   required
                   className="w-full px-4 py-3 rounded-xl border border-stone-200 outline-none text-stone-700 placeholder-stone-300 focus:border-stone-400 bg-stone-50"
                 />
@@ -77,7 +77,7 @@ export default function SignUp() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jamie@example.com"
+                  placeholder="name@example.com"
                   required
                   className="w-full px-4 py-3 rounded-xl border border-stone-200 outline-none text-stone-700 placeholder-stone-300 focus:border-stone-400 bg-stone-50"
                 />
