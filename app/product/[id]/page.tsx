@@ -19,6 +19,19 @@ interface Product {
   price?: string | null;
 }
 
+function parsePills(value: string): string[] {
+  const trimmed = value.trim();
+  // Handle old array-format strings like "['Acne', ' ', 'Redness']"
+  if (trimmed.startsWith("[")) {
+    const matches = trimmed.match(/'([^']+)'/g);
+    if (matches) {
+      return matches.map((m) => m.replace(/'/g, "").trim()).filter(Boolean);
+    }
+  }
+  // New format: comma-separated
+  return trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [product, setProduct] = useState<Product | null>(null);
@@ -351,18 +364,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 const irritant = ing.flags.find((f) => f.type === "irritant");
                 const beneficial = ing.flags.find((f) => f.type === "beneficial");
                 const hasWarn = fa || comedogenic || irritant;
-
                 const hasInfo = ingredientInfoNames.has(ing.name.toLowerCase().trim());
-                const Tag = hasInfo ? "button" : "div";
                 return (
-                  <Tag
+                  <button
                     key={i}
-                    {...(hasInfo ? { onClick: () => openIngredient(ing) } : {})}
-                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm w-full text-left transition-opacity ${
+                    onClick={() => openIngredient(ing)}
+                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm w-full text-left transition-opacity hover:opacity-75 ${
                       hasWarn ? "bg-amber-50 border border-amber-200" :
                       beneficial ? "bg-green-50 border border-green-100" :
                       "bg-white border border-stone-100"
-                    } ${hasInfo ? "hover:opacity-80 cursor-pointer" : "cursor-default"}`}
+                    }`}
                   >
                     <span className={`${hasWarn ? "text-amber-800 font-medium" : beneficial ? "text-green-800" : "text-stone-700"} ${hasInfo ? "border-b border-dotted border-current" : ""}`}>
                       {formatIngredientName(ing.name)}
@@ -372,8 +383,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       {!fa && comedogenic && <span className="text-amber-600">Comedogenic</span>}
                       {!fa && !comedogenic && irritant && <span className="text-amber-600">{irritant.reason}</span>}
                       {!hasWarn && beneficial && <span className="text-green-600">{beneficial.reason}</span>}
+                      {!hasWarn && !beneficial && hasInfo && <span className="text-stone-300">›</span>}
                     </span>
-                  </Tag>
+                  </button>
                 );
               })}
             </div>
@@ -462,34 +474,47 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 <div className="w-6 h-6 border-2 border-stone-200 border-t-stone-500 rounded-full animate-spin" />
               </div>
             ) : ingredientInfo ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-5">
                 {ingredientInfo.what_is_it && (
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1">What it is</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1.5">What it is</p>
                     <p className="text-sm text-stone-700 leading-relaxed">{ingredientInfo.what_is_it}</p>
                   </div>
                 )}
                 {ingredientInfo.what_does_it_do && (
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1">What it does</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1.5">What it does</p>
                     <p className="text-sm text-stone-700 leading-relaxed">{ingredientInfo.what_does_it_do}</p>
                   </div>
                 )}
-                {ingredientInfo.good_for && (
+                {ingredientInfo.good_for && parsePills(ingredientInfo.good_for).length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1">Good for</p>
-                    <p className="text-sm text-stone-700 leading-relaxed">{ingredientInfo.good_for}</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">Good for</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {parsePills(ingredientInfo.good_for).map((p, i) => (
+                        <span key={i} className="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">{p}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
-                {ingredientInfo.avoid_if && (
+                {ingredientInfo.avoid_if && parsePills(ingredientInfo.avoid_if).length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1">Avoid if</p>
-                    <p className="text-sm text-stone-700 leading-relaxed">{ingredientInfo.avoid_if}</p>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">Avoid if</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {parsePills(ingredientInfo.avoid_if).map((p, i) => (
+                        <span key={i} className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">{p}</span>
+                      ))}
+                    </div>
                   </div>
                 )}
+                <p className="text-xs text-stone-300 text-center pt-1">AI-generated · not medical advice</p>
               </div>
             ) : (
-              <p className="text-sm text-stone-400 text-center py-6">No additional information available for this ingredient.</p>
+              <div className="py-6 text-center">
+                {selectedIngredient.flags.length === 0 && (
+                  <p className="text-sm text-stone-400">No additional information available for this ingredient.</p>
+                )}
+              </div>
             )}
           </div>
         </div>
