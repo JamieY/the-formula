@@ -327,7 +327,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       "bg-white border border-stone-100"
                     } ${hasInfo ? "hover:opacity-80 cursor-pointer" : "cursor-default"}`}
                   >
-                    <span className={hasWarn ? "text-amber-800 font-medium" : beneficial ? "text-green-800" : "text-stone-700"}>
+                    <span className={`${hasWarn ? "text-amber-800 font-medium" : beneficial ? "text-green-800" : "text-stone-700"} ${hasInfo ? "border-b border-dotted border-current" : ""}`}>
                       {ing.name}
                     </span>
                     <span className="text-xs ml-3 text-right flex-shrink-0">
