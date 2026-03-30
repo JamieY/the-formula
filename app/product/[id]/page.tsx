@@ -357,7 +357,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {analysis ? (
-            <div className="flex flex-col gap-1.5 mb-6 max-h-80 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-1.5 mb-6">
               {analysis.ingredients.map((ing, i) => {
                 const fa = ing.flags.find((f) => f.type === "fa_trigger");
                 const comedogenic = ing.flags.find((f) => f.type === "comedogenic");
