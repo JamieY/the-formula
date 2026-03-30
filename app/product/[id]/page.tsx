@@ -19,6 +19,26 @@ interface Product {
   price?: string | null;
 }
 
+function getSkinFitWarnings(
+  analysis: import("@/lib/ingredients").ProductAnalysis,
+  profile: { skin_type: string | null; conditions: string[]; concerns: string[]; sensitivities: string[] }
+): string[] {
+  const warnings: string[] = [];
+  if (!analysis.isFASafe && profile.conditions.includes("fungal_acne")) {
+    warnings.push("Contains FA triggers (you have Fungal Acne)");
+  }
+  if (!analysis.isFragranceFree && profile.sensitivities.includes("fragrance")) {
+    warnings.push("Contains fragrance (your sensitivity)");
+  }
+  if (!analysis.isAlcoholFree && profile.sensitivities.includes("alcohol")) {
+    warnings.push("Contains alcohol (your sensitivity)");
+  }
+  if (analysis.comedogenicCount > 0 && (profile.concerns.includes("acne") || profile.conditions.includes("hormonal_acne"))) {
+    warnings.push(`${analysis.comedogenicCount} pore-clogging ingredient${analysis.comedogenicCount > 1 ? "s" : ""} (you're acne-prone)`);
+  }
+  return warnings;
+}
+
 function parsePills(value: string): string[] {
   const trimmed = value.trim();
   // Handle old array-format strings like "['Acne', ' ', 'Redness']"
@@ -48,9 +68,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [ingredientInfo, setIngredientInfo] = useState<{ scientific_name: string | null; what_is_it: string | null; what_does_it_do: string | null; good_for: string | null; avoid_if: string | null } | null>(null);
   const [loadingIngredient, setLoadingIngredient] = useState(false);
   const [ingredientInfoNames, setIngredientInfoNames] = useState<Set<string>>(new Set());
+  const [skinProfile, setSkinProfile] = useState<{ skin_type: string | null; conditions: string[]; concerns: string[]; sensitivities: string[] } | null>(null);
   const router = useRouter();
 
-  useEffect(() => { fetchProduct(); }, [id]);
+  useEffect(() => { fetchProduct(); fetchSkinProfile(); }, [id]);
 
   const fetchProduct = async () => {
     const { data: dbProduct } = await supabase
@@ -91,6 +112,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       }
     } catch { /* silent fail */ }
     setLoading(false);
+  };
+
+  const fetchSkinProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("skin_type, conditions, concerns, sensitivities")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (data) setSkinProfile(data);
   };
 
   const addToLog = async (status: ProductStatus) => {
@@ -316,6 +348,32 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           {product.price && (
             <p className="text-stone-500 text-sm mb-4">{product.price}</p>
           )}
+
+          {/* Skin fit banner */}
+          {analysis && skinProfile && (() => {
+            const warnings = getSkinFitWarnings(analysis, skinProfile);
+            if (warnings.length > 0) {
+              return (
+                <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 mb-4 flex items-start gap-3">
+                  <span className="text-red-500 mt-0.5 flex-shrink-0">⚠</span>
+                  <div>
+                    <p className="text-sm font-semibold text-red-700 mb-1">Heads up for your skin</p>
+                    <ul className="flex flex-col gap-0.5">
+                      {warnings.map((w, i) => (
+                        <li key={i} className="text-xs text-red-600">{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 mb-4 flex items-center gap-3">
+                <span className="text-green-600 flex-shrink-0">✓</span>
+                <p className="text-sm font-medium text-green-700">Looks good for your skin profile</p>
+              </div>
+            );
+          })()}
 
           {/* Analysis summary */}
           {analysis && (

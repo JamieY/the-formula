@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 const steps = [
   {
@@ -40,9 +42,17 @@ const steps = [
   },
 ];
 
+function normalize(values: string[]): string[] {
+  return values
+    .filter((v) => v !== "None")
+    .map((v) => v.toLowerCase().replace(/[^a-z0-9]+/g, "_"));
+}
+
 export default function Welcome() {
   const [currentStep, setCurrentStep] = useState(0);
   const [selections, setSelections] = useState<Record<number, string[]>>({});
+  const [saving, setSaving] = useState(false);
+  const router = useRouter();
 
   const step = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
@@ -61,6 +71,25 @@ export default function Welcome() {
   };
 
   const isSelected = (option: string) => (selections[step.id] || []).includes(option);
+
+  const saveAndFinish = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("user_profiles").upsert({
+          user_id: user.id,
+          skin_type: (selections[1]?.[0] || "").toLowerCase() || null,
+          conditions: normalize(selections[2] || []),
+          medications: (selections[3]?.[0] || "").toLowerCase().replace(/[^a-z0-9]+/g, "_") || null,
+          concerns: normalize(selections[4] || []),
+          sensitivities: normalize(selections[5] || []),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+      }
+    } catch { /* non-blocking */ }
+    router.push("/log");
+  };
 
   return (
     <main className="min-h-screen flex flex-col" style={{ backgroundColor: "#F5F0EA" }}>
@@ -114,13 +143,14 @@ export default function Welcome() {
               </button>
             )}
             {isLastStep ? (
-              <Link
-                href="/log"
-                className="flex-1 py-3 rounded-full text-white font-medium text-sm text-center"
+              <button
+                onClick={saveAndFinish}
+                disabled={saving}
+                className="flex-1 py-3 rounded-full text-white font-medium text-sm disabled:opacity-60"
                 style={{ backgroundColor: "#8B4513" }}
               >
-                Build My Formula →
-              </Link>
+                {saving ? "Saving..." : "Build My Formula →"}
+              </button>
             ) : (
               <button
                 onClick={() => setCurrentStep(currentStep + 1)}
@@ -132,7 +162,14 @@ export default function Welcome() {
             )}
           </div>
 
-          <p className="text-center text-xs text-stone-400 mt-6">
+          <button
+            onClick={() => router.push("/log")}
+            className="w-full text-center text-xs text-stone-400 mt-6 hover:text-stone-600"
+          >
+            Skip for now
+          </button>
+
+          <p className="text-center text-xs text-stone-400 mt-3">
             This is not medical advice — always consult your dermatologist.
           </p>
         </div>

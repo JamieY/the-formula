@@ -63,6 +63,19 @@ create table if not exists ingredient_info (
 
 create index if not exists ingredient_info_name_trgm on ingredient_info using gin (name gin_trgm_ops);
 
+-- User skin profile (from onboarding quiz)
+create table if not exists user_profiles (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null unique references auth.users (id) on delete cascade,
+  skin_type    text,
+  conditions   text[],
+  medications  text,
+  concerns     text[],
+  sensitivities text[],
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+
 -- Row Level Security
 alter table products         enable row level security;
 alter table ingredient_info  enable row level security;
@@ -89,6 +102,18 @@ create policy "user_products_update" on user_products
 
 create policy "user_products_delete" on user_products
   for delete using (auth.uid() = user_id);
+
+-- User profiles: users manage only their own
+alter table user_profiles enable row level security;
+
+create policy "user_profiles_select" on user_profiles
+  for select using (auth.uid() = user_id);
+
+create policy "user_profiles_insert" on user_profiles
+  for insert with check (auth.uid() = user_id);
+
+create policy "user_profiles_update" on user_profiles
+  for update using (auth.uid() = user_id);
 
 -- Flags: anyone can submit; only the submitter can see their own
 create policy "formula_flags_insert" on formula_flags
