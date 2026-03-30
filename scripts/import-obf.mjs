@@ -184,6 +184,27 @@ const TARGET_BRANDS = new Set([
   "isntree",
   "axis y",
   "abib",
+  // Added from Reddit brand gap scan
+  "cetaphil",
+  "aderma", "a-derma",
+  "aveeno",
+  "manyo", "ma:nyo", "manyo factory",
+  "purito",
+  "illiyoon",
+  "eltamd", "elta md",
+  "supergoop",
+  "good molecules",
+  "tower 28", "tower28",
+  "shiseido",
+  "dr jart", "dr. jart",
+  "klairs", "dear klairs",
+  "elf", "e.l.f.",
+  "mixsoon",
+  "stridex",
+  "olay",
+  "aveeno",
+  "aquaphor",
+  "drunk elephant",
 ]);
 
 function matchesTargetBrand(brandsStr) {
