@@ -26,7 +26,7 @@ const CATEGORIES = [
   { label: "Toner", value: "toner" },
   { label: "SPF / Sunscreen", value: "sunscreen" },
   { label: "Eye Cream", value: "eye" },
-  { label: "Mask", value: "mask" },
+  { label: "Face Mask", value: "mask" },
   { label: "Retinol", value: "retinol" },
   { label: "Prescription", value: "prescription" },
 ];
