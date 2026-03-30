@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -53,6 +53,30 @@ export default function Welcome() {
   const [selections, setSelections] = useState<Record<number, string[]>>({});
   const [saving, setSaving] = useState(false);
   const router = useRouter();
+
+  // Pre-load existing profile so editing feels natural
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return;
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("skin_type, conditions, medications, concerns, sensitivities")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+      if (!profile) return;
+
+      const denorm = (keys: string[]) =>
+        (keys || []).map((k) => k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()));
+
+      const preloaded: Record<number, string[]> = {};
+      if (profile.skin_type) preloaded[1] = [profile.skin_type.replace(/\b\w/g, (c: string) => c.toUpperCase())];
+      if (profile.conditions?.length) preloaded[2] = denorm(profile.conditions);
+      if (profile.medications) preloaded[3] = [profile.medications.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())];
+      if (profile.concerns?.length) preloaded[4] = denorm(profile.concerns);
+      if (profile.sensitivities?.length) preloaded[5] = denorm(profile.sensitivities);
+      setSelections(preloaded);
+    });
+  }, []);
 
   const step = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;

@@ -23,12 +23,30 @@ interface LogEntry {
 
 const FILTERS = ["All", "Love It", "Still Using", "Want to Try", "Abandoned"];
 
+interface SkinProfile {
+  skin_type: string | null;
+  conditions: string[];
+  concerns: string[];
+  sensitivities: string[];
+}
+
+const LABEL_MAP: Record<string, string> = {
+  oily: "Oily", dry: "Dry", combination: "Combination", sensitive: "Sensitive", normal: "Normal",
+  rosacea: "Rosacea", eczema: "Eczema", psoriasis: "Psoriasis", fungal_acne: "Fungal Acne", hormonal_acne: "Hormonal Acne",
+  acne: "Acne", aging___fine_lines: "Aging", dryness: "Dryness", hyperpigmentation: "Hyperpigmentation",
+  sensitivity: "Sensitivity", uneven_texture: "Uneven texture",
+  fragrance: "Fragrance", alcohol: "Alcohol", essential_oils: "Essential Oils", sulfates: "Sulfates", silicones: "Silicones",
+};
+
+function label(key: string) { return LABEL_MAP[key] || key; }
+
 export default function MyLog() {
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [user, setUser] = useState<any>(null);
+  const [skinProfile, setSkinProfile] = useState<SkinProfile | null | undefined>(undefined);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,8 +57,18 @@ export default function MyLog() {
       }
       setUser(data.user);
       fetchLog(data.user.id);
+      fetchProfile(data.user.id);
     });
   }, []);
+
+  const fetchProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("skin_type, conditions, concerns, sensitivities")
+      .eq("user_id", userId)
+      .maybeSingle();
+    setSkinProfile(data || null);
+  };
 
   const fetchLog = async (userId: string) => {
     const { data, error } = await supabase
@@ -104,6 +132,39 @@ export default function MyLog() {
             Add Product
           </Link>
         </div>
+
+        {/* Skin profile card */}
+        {skinProfile !== undefined && (
+          <div className="bg-white rounded-2xl p-5 border border-stone-100 shadow-sm mb-8 flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">Your Skin Profile</p>
+              {skinProfile ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {skinProfile.skin_type && (
+                    <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-600">{label(skinProfile.skin_type)}</span>
+                  )}
+                  {(skinProfile.conditions || []).map((c) => (
+                    <span key={c} className="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700">{label(c)}</span>
+                  ))}
+                  {(skinProfile.concerns || []).map((c) => (
+                    <span key={c} className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">{label(c)}</span>
+                  ))}
+                  {(skinProfile.sensitivities || []).map((s) => (
+                    <span key={s} className="px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-600">{label(s)} sensitive</span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-stone-400">No profile yet — take the quiz to get personalized ingredient warnings.</p>
+              )}
+            </div>
+            <Link
+              href="/welcome"
+              className="flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 hover:bg-stone-50 whitespace-nowrap"
+            >
+              {skinProfile ? "Edit" : "Take Quiz"}
+            </Link>
+          </div>
+        )}
 
         {/* Search */}
         <div className="flex items-center gap-3 bg-white rounded-full px-5 py-3 shadow-sm border border-stone-200 mb-5 max-w-md">
