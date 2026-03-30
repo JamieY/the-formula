@@ -21,6 +21,17 @@ export const STATUS_LABELS: Record<ProductStatus, string> = {
   still_using: "Still Using",
 };
 
+// Normalizes product names from imported datasets.
+// ALL-CAPS names (common in OBF) → title case; otherwise → ensure first letter is capitalized.
+export function formatProductName(name: string): string {
+  if (!name) return name;
+  const t = name.trim();
+  if (t === t.toUpperCase() && /[A-Z]/.test(t)) {
+    return t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 export const STATUS_COLORS: Record<ProductStatus, string> = {
   love_it: "bg-green-100 text-green-700",
   abandoned: "bg-red-100 text-red-600",
