@@ -33,6 +33,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [selectedIngredient, setSelectedIngredient] = useState<{ name: string; flags: import("@/lib/ingredients").IngredientFlag[] } | null>(null);
   const [ingredientInfo, setIngredientInfo] = useState<{ scientific_name: string | null; what_is_it: string | null; what_does_it_do: string | null; good_for: string | null; avoid_if: string | null } | null>(null);
   const [loadingIngredient, setLoadingIngredient] = useState(false);
+  const [ingredientInfoNames, setIngredientInfoNames] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   useEffect(() => { fetchProduct(); }, [id]);
@@ -54,7 +55,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         source: dbProduct.source_name,
         url: dbProduct.source_url,
       });
-      if (dbProduct.ingredients) setAnalysis(analyzeIngredients(dbProduct.ingredients));
+      if (dbProduct.ingredients) {
+        const a = analyzeIngredients(dbProduct.ingredients);
+        setAnalysis(a);
+        fetchIngredientInfoNames(a.ingredients.map((i) => i.name));
+      }
       setLoading(false);
       return;
     }
@@ -64,7 +69,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       if (res.ok) {
         const data = await res.json();
         setProduct(data);
-        if (data.ingredients) setAnalysis(analyzeIngredients(data.ingredients));
+        if (data.ingredients) {
+          const a = analyzeIngredients(data.ingredients);
+          setAnalysis(a);
+          fetchIngredientInfoNames(a.ingredients.map((i) => i.name));
+        }
       }
     } catch { /* silent fail */ }
     setLoading(false);
@@ -105,6 +114,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     } finally {
       setAddingStatus(null);
     }
+  };
+
+  const fetchIngredientInfoNames = async (names: string[]) => {
+    if (names.length === 0) return;
+    const { data } = await supabase
+      .from("ingredient_info")
+      .select("name")
+      .in("name", names.map((n) => n.toLowerCase().trim()));
+    if (data) setIngredientInfoNames(new Set(data.map((r) => r.name)));
   };
 
   const openIngredient = async (ing: { name: string; flags: import("@/lib/ingredients").IngredientFlag[] }) => {
@@ -297,15 +315,17 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 const beneficial = ing.flags.find((f) => f.type === "beneficial");
                 const hasWarn = fa || comedogenic || irritant;
 
+                const hasInfo = ingredientInfoNames.has(ing.name.toLowerCase().trim());
+                const Tag = hasInfo ? "button" : "div";
                 return (
-                  <button
+                  <Tag
                     key={i}
-                    onClick={() => openIngredient(ing)}
-                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm w-full text-left hover:opacity-80 transition-opacity ${
+                    {...(hasInfo ? { onClick: () => openIngredient(ing) } : {})}
+                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm w-full text-left transition-opacity ${
                       hasWarn ? "bg-amber-50 border border-amber-200" :
                       beneficial ? "bg-green-50 border border-green-100" :
                       "bg-white border border-stone-100"
-                    }`}
+                    } ${hasInfo ? "hover:opacity-80 cursor-pointer" : "cursor-default"}`}
                   >
                     <span className={hasWarn ? "text-amber-800 font-medium" : beneficial ? "text-green-800" : "text-stone-700"}>
                       {ing.name}
@@ -316,7 +336,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       {!fa && !comedogenic && irritant && <span className="text-amber-600">{irritant.reason}</span>}
                       {!hasWarn && beneficial && <span className="text-green-600">{beneficial.reason}</span>}
                     </span>
-                  </button>
+                  </Tag>
                 );
               })}
             </div>

@@ -128,7 +128,7 @@ async function buildOBFIndex() {
     const ingredients = row["ingredients_text"] || row["ingredients_text_en"] || "";
 
     if (name && ingredients && ingredients.length > 30 && ingredients.includes(",")) {
-      index.push({ name: normalize(name), brands: normalize(brands), ingredients });
+      index.push({ name: normalize(name), brands: normalize(brands), rawBrands: brands, rawName: name, ingredients });
     }
 
     if (lineCount % 50000 === 0) {
@@ -137,6 +137,66 @@ async function buildOBFIndex() {
   }
   console.log(`\r  Indexed ${lineCount.toLocaleString()} OBF rows, ${index.length.toLocaleString()} with ingredients.`);
   return index;
+}
+
+// Skincare brands to import from OBF — normalized (lowercase, no spaces)
+const TARGET_BRANDS = new Set([
+  "avene", "avène",
+  "larochposay", "larocheposay",
+  "bioderma",
+  "vichy",
+  "uriage",
+  "nuxe",
+  "embryolisse",
+  "caudalie",
+  "svr",
+  "ducray",
+  "roche posay",
+  "cerave",
+  "neutrogena",
+  "eucerin",
+  "nivea",
+  "clinique",
+  "origins",
+  "kiehl",
+  "kiehls",
+  "paula's choice",
+  "paulaschoice",
+  "theordinary",
+  "the ordinary",
+  "inkey",
+  "cosrx",
+  "dermalogica",
+  "murad",
+  "peter thomas roth",
+  "tatcha",
+  "drunk elephant",
+  "first aid beauty",
+  "belif",
+  "laneige",
+  "innisfree",
+  "some by mi",
+  "beauty of joseon",
+  "iunik",
+  "torriden",
+  "round lab",
+  "isntree",
+  "axis y",
+  "abib",
+]);
+
+function matchesTargetBrand(brandsStr) {
+  if (!brandsStr) return false;
+  const lower = brandsStr.toLowerCase().replace(/[^a-z0-9]/g, "");
+  for (const brand of TARGET_BRANDS) {
+    const norm = brand.replace(/[^a-z0-9]/g, "");
+    if (lower.includes(norm)) return true;
+  }
+  return false;
+}
+
+function slugify(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 async function main() {
@@ -156,49 +216,86 @@ async function main() {
   // Step 3: Build index
   const obfIndex = await buildOBFIndex();
 
-  // Step 4: Load our products missing ingredients
-  const { data: products, error } = await supabase
+  // Step 4: Insert new products from target brands
+  console.log(`\n🏪 Filtering for target brands...\n`);
+
+  const toInsert = obfIndex
+    .filter((r) => matchesTargetBrand(r.brands))
+    .map((r) => ({
+      name: r.rawName,
+      brand: r.rawBrands.split(",")[0].trim(),
+      ingredients: r.ingredients,
+      source_name: "Open Beauty Facts",
+      external_id: `obf-${slugify(r.brands + "-" + r.name).slice(0, 80)}`,
+    }))
+    .filter((r) => r.name && r.brand && r.ingredients);
+
+  // Deduplicate by external_id within this batch
+  const seen = new Set();
+  const deduped = toInsert.filter((r) => {
+    if (seen.has(r.external_id)) return false;
+    seen.add(r.external_id);
+    return true;
+  });
+
+  console.log(`  ${deduped.length} target-brand products to upsert\n`);
+
+  let inserted = 0;
+  let failed = 0;
+  const BATCH_SIZE = 100;
+
+  for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+    const batch = deduped.slice(i, i + BATCH_SIZE);
+    const { error } = await supabase
+      .from("products")
+      .upsert(batch, { onConflict: "external_id" });
+
+    if (error) {
+      console.log(`  ✗ Batch ${Math.floor(i / BATCH_SIZE) + 1} error:`, error.message);
+      failed += batch.length;
+    } else {
+      inserted += batch.length;
+    }
+
+    if (i % 1000 === 0 && i > 0) {
+      console.log(`  [${i}/${deduped.length}] ${inserted} inserted so far...`);
+    }
+  }
+
+  // Step 5: Also fill in missing ingredients for existing products
+  const { data: products } = await supabase
     .from("products")
     .select("id, name, brand")
     .is("ingredients", null);
 
-  if (error) { console.error("DB error:", error.message); process.exit(1); }
-
-  console.log(`\n🔍 Matching ${products.length} products against ${obfIndex.length.toLocaleString()} OBF entries...\n`);
-
   let matched = 0;
   let updated = 0;
 
-  for (const p of products) {
-    const normName = normalize(p.name);
-    const normBrand = normalize(p.brand || "");
+  if (products?.length) {
+    console.log(`\n🔍 Filling ingredients for ${products.length} existing products...\n`);
+    for (const p of products) {
+      const normName = normalize(p.name);
+      const normBrand = normalize(p.brand || "");
+      let bestScore = 0;
+      let bestIngredients = null;
 
-    // Find best OBF match: brand must match reasonably, name must be similar
-    let bestScore = 0;
-    let bestIngredients = null;
-
-    for (const obf of obfIndex) {
-      // Quick brand pre-filter
-      if (normBrand && obf.brands) {
-        const brandMatch = obf.brands.includes(normBrand) || normBrand.split(" ").some((w) => w.length > 3 && obf.brands.includes(w));
-        if (!brandMatch) continue;
+      for (const obf of obfIndex) {
+        if (normBrand && obf.brands) {
+          const brandMatch = obf.brands.includes(normBrand) || normBrand.split(" ").some((w) => w.length > 3 && obf.brands.includes(w));
+          if (!brandMatch) continue;
+        }
+        const score = nameSimilarity(normName, obf.name);
+        if (score > bestScore) { bestScore = score; bestIngredients = obf.ingredients; }
       }
 
-      const score = nameSimilarity(normName, obf.name);
-      if (score > bestScore) {
-        bestScore = score;
-        bestIngredients = obf.ingredients;
+      if (bestScore >= 0.6 && bestIngredients) {
+        matched++;
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({ ingredients: bestIngredients })
+          .eq("id", p.id);
+        if (!updateError) updated++;
       }
-    }
-
-    // Threshold: 0.6 similarity = decent match
-    if (bestScore >= 0.6 && bestIngredients) {
-      matched++;
-      const { error: updateError } = await supabase
-        .from("products")
-        .update({ ingredients: bestIngredients })
-        .eq("id", p.id);
-      if (!updateError) updated++;
     }
   }
 
@@ -208,8 +305,9 @@ async function main() {
     .not("ingredients", "is", null);
 
   console.log(`\n✅ Done!`);
-  console.log(`   ${matched} products matched in OBF`);
-  console.log(`   ${updated} products updated in DB`);
+  console.log(`   ${inserted} new products inserted from target brands`);
+  if (failed > 0) console.log(`   ${failed} failed`);
+  console.log(`   ${updated} existing products filled with ingredients`);
   console.log(`   ${count} total products in DB with ingredients`);
 }
 
