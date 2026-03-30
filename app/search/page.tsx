@@ -27,7 +27,7 @@ const CATEGORIES = [
   { label: "SPF / Sunscreen", value: "sunscreen" },
   { label: "Eye Cream", value: "eye" },
   { label: "Face Mask", value: "mask" },
-  { label: "Retinol", value: "retinol" },
+  { label: "Retinol / Retinoid", value: "retinol" },
   { label: "Prescription", value: "prescription" },
 ];
 

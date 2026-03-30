@@ -20,8 +20,30 @@ export const CATEGORY_KEYWORDS: Record<string, string[]> = {
     // Bare "mask" catches everything else (database is skincare-only so no surgical masks)
     "mask",
   ],
-  retinol: ["retinol", "retinoid", "retinal", "tretinoin", "retin-a"],
-  prescription: ["prescription", "tretinoin", "clindamycin", "adapalene", "benzoyl", "tazarotene", "spironolactone"],
+  retinol: [
+    "retinol", "retinoid", "retinal", "retinaldehyde",
+    "tretinoin", "retin-a",         // also in prescription — products with these get both tags
+    "adapalene", "differin",         // OTC retinoid
+    "epiduo",                        // OTC adapalene + BP combo
+  ],
+  prescription: [
+    // Generics
+    "tretinoin", "clindamycin", "tazarotene", "spironolactone", "dapsone", "clascoterone",
+    "ivermectin", "metronidazole", "azelaic acid",
+    // Brand names
+    "retin-a", "retin a", "retin-a micro",
+    "finacea", "skinoren",                          // azelaic acid Rx
+    "tazorac",                                       // tazarotene
+    "aczone",                                        // dapsone
+    "winlevi",                                       // clascoterone
+    "ziana", "veltin",                               // tretinoin + clindamycin combos
+    "epiduo forte",                                  // adapalene + BP forte (Rx)
+    "onexton",                                       // clindamycin + BP
+    "soolantra",                                     // ivermectin (rosacea)
+    "mirvaso", "rhofade",                            // brimonidine / oxymetazoline (rosacea)
+    "oracea",                                        // doxycycline (rosacea)
+    // Note: Differin (adapalene 0.1%) and regular Epiduo are now OTC — tagged under retinol
+  ],
 };
 
 export const CATEGORY_LABELS: Record<string, string> = {
@@ -32,7 +54,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   sunscreen: "SPF / Sunscreen",
   eye: "Eye Cream",
   mask: "Face Mask",
-  retinol: "Retinol",
+  retinol: "Retinol / Retinoid",
   prescription: "Prescription",
 };
 
