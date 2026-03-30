@@ -248,14 +248,38 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               🔄 Find a Dupe
             </Link>
 
-            <a
-              href={`https://www.amazon.com/s?k=${encodeURIComponent(`${product.brand} ${product.name}`)}&tag=theformula20-20`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full py-3 rounded-full border border-amber-200 text-amber-800 font-medium text-sm text-center hover:bg-amber-50"
-            >
-              Find on Amazon
-            </a>
+            <div>
+              <p className="text-xs text-stone-400 text-center mb-2">Shop &amp; read reviews</p>
+              <div className="grid grid-cols-3 gap-2">
+                <a
+                  href={`https://www.sephora.com/search?keyword=${encodeURIComponent(`${product.brand} ${formatProductName(product.name, product.brand)}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 py-2.5 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors"
+                >
+                  <span className="text-base">🛍️</span>
+                  <span className="text-xs font-medium text-stone-600">Sephora</span>
+                </a>
+                <a
+                  href={`https://www.ulta.com/search?search=${encodeURIComponent(`${product.brand} ${formatProductName(product.name, product.brand)}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 py-2.5 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors"
+                >
+                  <span className="text-base">💄</span>
+                  <span className="text-xs font-medium text-stone-600">Ulta</span>
+                </a>
+                <a
+                  href={`https://www.amazon.com/s?k=${encodeURIComponent(`${product.brand} ${formatProductName(product.name, product.brand)}`)}&tag=theformula20-20`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center gap-1 py-2.5 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors"
+                >
+                  <span className="text-base">📦</span>
+                  <span className="text-xs font-medium text-stone-600">Amazon</span>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 
