@@ -34,10 +34,8 @@ export function formatProductName(name: string, brand?: string): string {
     }
   }
   if (!t) return name.trim();
-  if (t === t.toUpperCase() && /[A-Z]/.test(t)) {
-    return t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-  return t.charAt(0).toUpperCase() + t.slice(1);
+  // Title-case every word (handles all-lowercase, ALL-CAPS, and mixed input)
+  return t.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export const STATUS_COLORS: Record<ProductStatus, string> = {
