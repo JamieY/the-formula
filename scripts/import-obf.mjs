@@ -125,8 +125,8 @@ async function buildOBFIndex() {
 
     const name = row["product_name_en"] || row["product_name"] || "";
     const brands = row["brands"] || "";
-    // Prefer English ingredients; skip if only non-English is available
-    const ingredients = row["ingredients_text_en"] || "";
+    // Prefer English ingredients; fall back to the main field (non-Latin text is filtered at display time)
+    const ingredients = row["ingredients_text_en"] || row["ingredients_text"] || "";
 
     if (name && ingredients && ingredients.length > 30 && ingredients.includes(",")) {
       index.push({ name: normalize(name), brands: normalize(brands), rawBrands: brands, rawName: name, ingredients });
