@@ -44,13 +44,33 @@ create table if not exists formula_flags (
   created_at timestamptz not null default now()
 );
 
+-- Ingredient reference table (populated from INCI dataset)
+-- Powers the "click an ingredient to learn about it" feature
+create table if not exists ingredient_info (
+  id               uuid primary key default gen_random_uuid(),
+  name             text not null unique,
+  scientific_name  text,
+  what_is_it       text,
+  what_does_it_do  text,
+  good_for         text,
+  avoid_if         text,
+  created_at       timestamptz not null default now()
+);
+
+create index if not exists ingredient_info_name_trgm on ingredient_info using gin (name gin_trgm_ops);
+
 -- Row Level Security
-alter table products      enable row level security;
+alter table products         enable row level security;
+alter table ingredient_info  enable row level security;
 alter table user_products enable row level security;
 alter table formula_flags enable row level security;
 
 -- Products: readable by everyone, writable only by service role (import scripts)
 create policy "products_public_read" on products
+  for select using (true);
+
+-- Ingredient info: readable by everyone
+create policy "ingredient_info_public_read" on ingredient_info
   for select using (true);
 
 -- User log: users see and manage only their own entries
