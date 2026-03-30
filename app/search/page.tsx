@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase, type ProductStatus, STATUS_LABELS, formatProductName } from "@/lib/supabase";
+import { supabase, type ProductStatus, STATUS_LABELS, formatProductName, formatIngredients } from "@/lib/supabase";
 import NavBar from "@/app/components/NavBar";
 
 interface Product {
@@ -212,7 +212,7 @@ function SearchPageInner() {
                       <p className="text-xs text-stone-500 mb-1">{product.price}</p>
                     )}
                     {product.ingredients ? (
-                      <p className="text-xs text-stone-400 line-clamp-2">{product.ingredients.replace(/,(?!\s)/g, ", ")}</p>
+                      <p className="text-xs text-stone-400 line-clamp-2">{formatIngredients(product.ingredients)}</p>
                     ) : (
                       <p className="text-xs text-stone-300 italic">Ingredients not yet available</p>
                     )}

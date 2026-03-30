@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase, STATUS_LABELS, type ProductStatus, formatProductName } from "@/lib/supabase";
+import { supabase, STATUS_LABELS, type ProductStatus, formatProductName, formatIngredientName } from "@/lib/supabase";
 import { analyzeIngredients, type ProductAnalysis } from "@/lib/ingredients";
 import NavBar from "@/app/components/NavBar";
 
@@ -328,7 +328,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     } ${hasInfo ? "hover:opacity-80 cursor-pointer" : "cursor-default"}`}
                   >
                     <span className={`${hasWarn ? "text-amber-800 font-medium" : beneficial ? "text-green-800" : "text-stone-700"} ${hasInfo ? "border-b border-dotted border-current" : ""}`}>
-                      {ing.name}
+                      {formatIngredientName(ing.name)}
                     </span>
                     <span className="text-xs ml-3 text-right flex-shrink-0">
                       {fa && <span className="text-red-500">FA trigger</span>}
@@ -391,7 +391,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1 pr-4">
                 <h2 className="font-serif font-semibold text-xl leading-tight" style={{ color: "#2C2C2C" }}>
-                  {selectedIngredient.name}
+                  {formatIngredientName(selectedIngredient.name)}
                 </h2>
                 {ingredientInfo?.scientific_name && (
                   <p className="text-xs text-stone-400 mt-0.5 italic">{ingredientInfo.scientific_name}</p>

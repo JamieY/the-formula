@@ -21,6 +21,20 @@ export const STATUS_LABELS: Record<ProductStatus, string> = {
   still_using: "Still Using",
 };
 
+// Normalizes a single ingredient name to title case (e.g. "CETEARYL ALCOHOL" → "Cetearyl Alcohol").
+export function formatIngredientName(name: string): string {
+  if (!name) return name;
+  return name.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Normalizes a full ingredients string — fixes spacing and title-cases each ingredient.
+export function formatIngredients(ingredients: string): string {
+  return ingredients
+    .split(/,\s*/)
+    .map((s) => formatIngredientName(s))
+    .join(", ");
+}
+
 // Normalizes product names from imported datasets.
 // Strips leading brand prefix if present, converts ALL-CAPS to title case,
 // and ensures the first letter is capitalized.

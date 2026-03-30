@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import NavBar from "@/app/components/NavBar";
-import { formatProductName } from "@/lib/supabase";
+import { formatProductName, formatIngredients } from "@/lib/supabase";
 
 interface Product {
   id: string;
@@ -114,7 +114,7 @@ function DupeDetectorInner() {
     }
   };
 
-  const fmtIngredients = (s: string | null) => s ? s.replace(/,(?!\s)/g, ", ") : "";
+  const fmtIngredients = (s: string | null) => s ? formatIngredients(s) : "";
 
   const scoreColor = (score: number) => {
     if (score >= 70) return { bg: "#dcfce7", border: "#16a34a", text: "#15803d" };
