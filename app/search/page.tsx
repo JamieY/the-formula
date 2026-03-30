@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase, type ProductStatus, STATUS_LABELS, formatProductName, formatIngredients } from "@/lib/supabase";
+import { getProductCategories, CATEGORY_LABELS } from "@/lib/categories";
 import NavBar from "@/app/components/NavBar";
 
 interface Product {
@@ -208,6 +209,18 @@ function SearchPageInner() {
                       <p className="text-xs font-semibold tracking-widest uppercase text-stone-400">{product.brand}</p>
                     </div>
                     <p className="font-semibold text-stone-800 mb-1">{formatProductName(product.name, product.brand)}</p>
+                    {(() => {
+                      const cats = getProductCategories(product.name);
+                      return cats.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 mb-1">
+                          {cats.map((c) => (
+                            <span key={c} className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 font-medium">
+                              {CATEGORY_LABELS[c]}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
                     {product.price && (
                       <p className="text-xs text-stone-500 mb-1">{product.price}</p>
                     )}

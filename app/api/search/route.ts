@@ -1,26 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-
-// Keep in sync with app/api/dupes/route.ts CATEGORY_KEYWORDS
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  moisturizer: ["moisturizer", "moisturising", "moisturizing", "cream", "lotion", "hydrating", "hydration", "hydro", "gel cream", "daily face", "face oil", "facial oil", "balm", "butter"],
-  cleanser: ["cleanser", "cleansing", "face wash", "facial wash", "foaming wash", "gel wash", "micellar", "cleanse", "makeup remover", "scrub"],
-  serum: ["serum", "essence", "ampoule", "booster", "concentrate", "drops"],
-  toner: ["toner", "toning", "mist", "prep", "softener"],
-  sunscreen: ["sunscreen", "spf", "sun protection", "sunblock", "broad spectrum"],
-  eye: ["eye cream", "eye gel", "eye serum", "eye treatment", "eye"],
-  mask: ["mask", "masque", "sheet mask", "clay mask", "peel off", "sleeping mask"],
-  retinol: ["retinol", "retinoid", "retinal", "tretinoin", "retin-a"],
-  prescription: ["prescription", "tretinoin", "clindamycin", "adapalene", "benzoyl", "tazarotene", "spironolactone"],
-};
-
-function matchesCategory(name: string, category: string): boolean {
-  if (!category) return true;
-  const keywords = CATEGORY_KEYWORDS[category];
-  if (!keywords) return true;
-  const lower = name.toLowerCase();
-  return keywords.some((kw) => lower.includes(kw));
-}
+import { matchesCategory } from "@/lib/categories";
 
 function normalize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, "");

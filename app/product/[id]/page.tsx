@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, STATUS_LABELS, type ProductStatus, formatProductName, formatIngredientName } from "@/lib/supabase";
+import { getProductCategories, CATEGORY_LABELS } from "@/lib/categories";
 import { analyzeIngredients, type ProductAnalysis } from "@/lib/ingredients";
 import NavBar from "@/app/components/NavBar";
 
@@ -262,6 +263,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         <div>
           <p className="text-xs font-semibold tracking-widest uppercase mb-1" style={{ color: "#8B4513" }}>{product.brand}</p>
           <h1 className="text-2xl md:text-3xl font-serif font-semibold mb-2" style={{ color: "#2C2C2C" }}>{formatProductName(product.name, product.brand)}</h1>
+          {(() => {
+            const cats = getProductCategories(product.name);
+            return cats.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {cats.map((c) => (
+                  <span key={c} className="text-xs px-2.5 py-1 rounded-full bg-stone-100 text-stone-500 font-medium">
+                    {CATEGORY_LABELS[c]}
+                  </span>
+                ))}
+              </div>
+            ) : null;
+          })()}
 
           {product.price && (
             <p className="text-stone-500 text-sm mb-4">{product.price}</p>
