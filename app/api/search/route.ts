@@ -8,11 +8,35 @@ function normalize(s: string) {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get("q");
+  const query = searchParams.get("q") || "";
   const category = searchParams.get("category") || "";
 
-  if (!query) {
-    return NextResponse.json({ error: "Query is required" }, { status: 400 });
+  if (!query && !category) {
+    return NextResponse.json({ error: "Query or category is required" }, { status: 400 });
+  }
+
+  // Category-only browse (no text query)
+  if (!query && category) {
+    const keywords = (await import("@/lib/categories")).CATEGORY_KEYWORDS[category] || [];
+    if (keywords.length === 0) return NextResponse.json({ products: [] });
+    try {
+      const { data } = await supabase
+        .from("products")
+        .select("id, external_id, name, brand, ingredients, image")
+        .or(keywords.map((kw) => `name.ilike.%${kw}%`).join(","))
+        .limit(40);
+      const products = (data || []).map((p) => ({
+        id: p.external_id || p.id,
+        name: p.name,
+        brand: p.brand,
+        ingredients: p.ingredients || null,
+        image: p.image || null,
+      }));
+      return NextResponse.json({ products });
+    } catch (err) {
+      console.error("Category browse error:", err);
+      return NextResponse.json({ error: "Search failed" }, { status: 500 });
+    }
   }
 
   const words = query.trim().toLowerCase().split(/\s+/).filter((w) => w.length > 1);

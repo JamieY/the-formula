@@ -51,7 +51,7 @@ function SearchPageInner() {
   const lastSearchedRef = useRef("");
 
   const search = async (q: string, cat: string) => {
-    if (!q.trim()) return;
+    if (!q.trim() && !cat) return;
     lastSearchedRef.current = q;
 
     // Sync URL so the browser back button restores results
@@ -83,7 +83,7 @@ function SearchPageInner() {
 
   const handleCategoryChange = (cat: string) => {
     setCategory(cat);
-    if (searched) search(query, cat);
+    search(query, cat);
   };
 
   const addToLog = async (product: Product, status: ProductStatus) => {
