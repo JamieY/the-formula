@@ -23,7 +23,7 @@ const env = Object.fromEntries(
 
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
-const CSV_PATH = `${process.env.HOME}/Downloads/dermstore-products.csv`;
+const JSON_PATH = `${process.env.HOME}/Downloads/dermstore_data.json`;
 
 // Skip non-skincare categories
 const SKIP_CATEGORIES = [
@@ -38,33 +38,6 @@ function isSkippable(category) {
   return SKIP_CATEGORIES.some((kw) => lower.includes(kw));
 }
 
-function parseCSV(content) {
-  const lines = content.split("\n").filter((l) => l.trim());
-  const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const fields = [];
-    let current = "";
-    let inQuotes = false;
-    for (let j = 0; j < lines[i].length; j++) {
-      const ch = lines[i][j];
-      if (ch === '"') {
-        if (inQuotes && lines[i][j + 1] === '"') { current += '"'; j++; }
-        else inQuotes = !inQuotes;
-      } else if (ch === "," && !inQuotes) {
-        fields.push(current.trim());
-        current = "";
-      } else {
-        current += ch;
-      }
-    }
-    fields.push(current.trim());
-    rows.push(Object.fromEntries(headers.map((h, idx) => [h, (fields[idx] || "").trim()])));
-  }
-  return rows;
-}
-
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
@@ -72,10 +45,8 @@ function slugify(str) {
 async function main() {
   console.log("\n🛍️  Importing Dermstore dataset...\n");
 
-  const content = readFileSync(CSV_PATH, "utf-8");
-  const rows = parseCSV(content);
-  console.log(`  Parsed ${rows.length} rows`);
-  console.log(`  Columns: ${Object.keys(rows[0]).join(", ")}\n`);
+  const rows = JSON.parse(readFileSync(JSON_PATH, "utf-8"));
+  console.log(`  Parsed ${rows.length} rows\n`);
 
   const valid = rows.filter((r) => {
     if (!r.title || !r.brand) return false;

@@ -23,7 +23,7 @@ const env = Object.fromEntries(
 
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
-const CSV_PATH = `${process.env.HOME}/Downloads/inci-ingredients.csv`;
+const CSV_PATH = `${process.env.HOME}/Downloads/inci-ingredients.csv.csv`;
 
 function parseCSV(content) {
   const lines = content.split("\n").filter((l) => l.trim());
@@ -63,12 +63,22 @@ async function main() {
   const valid = rows.filter((r) => r.name && r.name.length > 1);
   console.log(`  ${valid.length} rows with valid ingredient names\n`);
 
+  // Deduplicate by name (keep first occurrence)
+  const seen = new Set();
+  const deduped = valid.filter((r) => {
+    const key = r.name.toLowerCase().trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  console.log(`  ${deduped.length} unique ingredient names\n`);
+
   let inserted = 0;
   let failed = 0;
   const BATCH_SIZE = 100;
 
-  for (let i = 0; i < valid.length; i += BATCH_SIZE) {
-    const batch = valid.slice(i, i + BATCH_SIZE).map((r) => ({
+  for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+    const batch = deduped.slice(i, i + BATCH_SIZE).map((r) => ({
       name:            r.name.toLowerCase().trim(),
       scientific_name: r.scientific_name || null,
       what_is_it:      r.what_is_it || null,

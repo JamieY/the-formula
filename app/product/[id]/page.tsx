@@ -30,6 +30,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [flagNote, setFlagNote] = useState("");
   const [flagSubmitting, setFlagSubmitting] = useState(false);
   const [flagDone, setFlagDone] = useState(false);
+  const [selectedIngredient, setSelectedIngredient] = useState<{ name: string; flags: import("@/lib/ingredients").IngredientFlag[] } | null>(null);
+  const [ingredientInfo, setIngredientInfo] = useState<{ scientific_name: string | null; what_is_it: string | null; what_does_it_do: string | null; good_for: string | null; avoid_if: string | null } | null>(null);
+  const [loadingIngredient, setLoadingIngredient] = useState(false);
   const router = useRouter();
 
   useEffect(() => { fetchProduct(); }, [id]);
@@ -102,6 +105,19 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     } finally {
       setAddingStatus(null);
     }
+  };
+
+  const openIngredient = async (ing: { name: string; flags: import("@/lib/ingredients").IngredientFlag[] }) => {
+    setSelectedIngredient(ing);
+    setIngredientInfo(null);
+    setLoadingIngredient(true);
+    const { data } = await supabase
+      .from("ingredient_info")
+      .select("scientific_name, what_is_it, what_does_it_do, good_for, avoid_if")
+      .ilike("name", ing.name.trim())
+      .maybeSingle();
+    setIngredientInfo(data);
+    setLoadingIngredient(false);
   };
 
   const submitFlag = async () => {
@@ -282,9 +298,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 const hasWarn = fa || comedogenic || irritant;
 
                 return (
-                  <div
+                  <button
                     key={i}
-                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm ${
+                    onClick={() => openIngredient(ing)}
+                    className={`flex items-center justify-between px-4 py-2.5 rounded-xl text-sm w-full text-left hover:opacity-80 transition-opacity ${
                       hasWarn ? "bg-amber-50 border border-amber-200" :
                       beneficial ? "bg-green-50 border border-green-100" :
                       "bg-white border border-stone-100"
@@ -299,7 +316,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       {!fa && !comedogenic && irritant && <span className="text-amber-600">{irritant.reason}</span>}
                       {!hasWarn && beneficial && <span className="text-green-600">{beneficial.reason}</span>}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -342,6 +359,81 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <button onClick={() => setShowStatusPicker(false)} className="w-full mt-4 text-sm text-stone-400 hover:text-stone-600">
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ingredient detail modal */}
+      {selectedIngredient && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 px-0 sm:px-6" onClick={() => setSelectedIngredient(null)}>
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl p-7 shadow-xl w-full sm:max-w-md max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1 pr-4">
+                <h2 className="font-serif font-semibold text-xl leading-tight" style={{ color: "#2C2C2C" }}>
+                  {selectedIngredient.name}
+                </h2>
+                {ingredientInfo?.scientific_name && (
+                  <p className="text-xs text-stone-400 mt-0.5 italic">{ingredientInfo.scientific_name}</p>
+                )}
+              </div>
+              <button onClick={() => setSelectedIngredient(null)} className="text-stone-400 hover:text-stone-600 flex-shrink-0 mt-0.5">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Flags from local analysis */}
+            {selectedIngredient.flags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-5">
+                {selectedIngredient.flags.map((f, i) => (
+                  <span key={i} className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    f.type === "fa_trigger" ? "bg-red-100 text-red-600" :
+                    f.type === "comedogenic" ? "bg-amber-100 text-amber-700" :
+                    f.type === "irritant" ? "bg-amber-100 text-amber-700" :
+                    "bg-green-100 text-green-700"
+                  }`}>
+                    {f.reason}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {loadingIngredient ? (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-stone-200 border-t-stone-500 rounded-full animate-spin" />
+              </div>
+            ) : ingredientInfo ? (
+              <div className="flex flex-col gap-4">
+                {ingredientInfo.what_is_it && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1">What it is</p>
+                    <p className="text-sm text-stone-700 leading-relaxed">{ingredientInfo.what_is_it}</p>
+                  </div>
+                )}
+                {ingredientInfo.what_does_it_do && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1">What it does</p>
+                    <p className="text-sm text-stone-700 leading-relaxed">{ingredientInfo.what_does_it_do}</p>
+                  </div>
+                )}
+                {ingredientInfo.good_for && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1">Good for</p>
+                    <p className="text-sm text-stone-700 leading-relaxed">{ingredientInfo.good_for}</p>
+                  </div>
+                )}
+                {ingredientInfo.avoid_if && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-1">Avoid if</p>
+                    <p className="text-sm text-stone-700 leading-relaxed">{ingredientInfo.avoid_if}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-stone-400 text-center py-6">No additional information available for this ingredient.</p>
+            )}
           </div>
         </div>
       )}
