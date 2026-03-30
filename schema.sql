@@ -14,8 +14,12 @@ create table if not exists products (
   created_at  timestamptz not null default now()
 );
 
-create index if not exists products_name_idx  on products (name);
-create index if not exists products_brand_idx on products (brand);
+-- pg_trgm is required for ilike '%…%' index scans (wildcard-on-both-sides)
+create extension if not exists pg_trgm;
+
+create index if not exists products_name_trgm on products using gin (name gin_trgm_ops);
+create index if not exists products_brand_trgm on products using gin (brand gin_trgm_ops);
+create index if not exists products_ing_trgm on products using gin (ingredients gin_trgm_ops);
 
 -- User product log
 create table if not exists user_products (
