@@ -27,10 +27,13 @@ export function formatIngredientName(name: string): string {
   return name.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Normalizes a full ingredients string — fixes spacing and title-cases each ingredient.
+// Normalizes a full ingredients string — fixes spacing, title-cases, and strips non-Latin text.
+const NON_LATIN_RE = /[\u0600-\u06FF\u0750-\u077F\u4E00-\u9FFF\u0400-\u04FF\u0590-\u05FF\u0900-\u097F\u3040-\u30FF\uAC00-\uD7AF]/;
 export function formatIngredients(ingredients: string): string {
   return ingredients
     .split(/,\s*/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 1 && /^[A-Za-z\u00C0-\u024F0-9]/.test(s) && !NON_LATIN_RE.test(s))
     .map((s) => formatIngredientName(s))
     .join(", ");
 }

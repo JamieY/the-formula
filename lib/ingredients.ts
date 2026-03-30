@@ -117,10 +117,6 @@ function preprocessIngredients(text: string): string {
     }
   }
 
-  // Strip non-Latin script segments (Arabic, Chinese, Cyrillic, Hebrew, etc.)
-  // These appear in OBF data as marketing descriptions prepended to the ingredient list
-  text = text.replace(/[^\u0000-\u024F\s,;.()\[\]\/\-+%°'"0-9]+/g, " ").replace(/\s{2,}/g, " ").trim();
-
   // Strip common OCR / label noise before the list
   text = text
     .replace(/\d+(\.\d+)?%[^,]*/g, "") // "0% preservative" type claims
@@ -145,7 +141,8 @@ export function analyzeIngredients(ingredientsText: string): ProductAnalysis {
     .split(/,|;/)
     .map((s) => s.trim())
     .filter((s) => s.length > 1 && s.length < 80) // skip suspiciously long "ingredients" (OCR garbage)
-    .filter((s) => !NON_LATIN.test(s)); // skip non-Latin script text (Arabic descriptions, etc.)
+    .filter((s) => !NON_LATIN.test(s)) // skip items containing non-Latin script
+    .filter((s) => /^[A-Za-z\u00C0-\u024F0-9]/.test(s)); // must start with a letter or number (filters leftover punctuation)
 
   const analyzed: AnalyzedIngredient[] = raw.map((name) => {
     const flags: IngredientFlag[] = [];
