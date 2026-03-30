@@ -26,30 +26,34 @@ const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE
 const CSV_PATH = `${process.env.HOME}/Downloads/inci-ingredients.csv.csv`;
 
 function parseCSV(content) {
-  const lines = content.split("\n").filter((l) => l.trim());
-  const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-
+  // Parse character-by-character to correctly handle multi-line quoted fields
+  const fields = [];
   const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const fields = [];
-    let current = "";
-    let inQuotes = false;
-    for (let j = 0; j < lines[i].length; j++) {
-      const ch = lines[i][j];
-      if (ch === '"') {
-        if (inQuotes && lines[i][j + 1] === '"') { current += '"'; j++; }
-        else inQuotes = !inQuotes;
-      } else if (ch === "," && !inQuotes) {
-        fields.push(current.trim());
-        current = "";
-      } else {
-        current += ch;
-      }
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    if (ch === '"') {
+      if (inQuotes && content[i + 1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === "," && !inQuotes) {
+      fields.push(current);
+      current = "";
+    } else if ((ch === "\n" || (ch === "\r" && content[i + 1] === "\n")) && !inQuotes) {
+      if (ch === "\r") i++; // skip \n after \r
+      fields.push(current);
+      current = "";
+      if (fields.some((f) => f.trim())) rows.push([...fields]);
+      fields.length = 0;
+    } else {
+      current += ch;
     }
-    fields.push(current.trim());
-    rows.push(Object.fromEntries(headers.map((h, idx) => [h, (fields[idx] || "").trim()])));
   }
-  return rows;
+  if (current || fields.length) { fields.push(current); rows.push([...fields]); }
+
+  const headers = rows[0].map((h) => h.trim().replace(/^"|"$/g, ""));
+  return rows.slice(1).map((r) => Object.fromEntries(headers.map((h, i) => [h, (r[i] || "").trim()])));
 }
 
 async function main() {

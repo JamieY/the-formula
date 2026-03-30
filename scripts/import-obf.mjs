@@ -252,11 +252,13 @@ async function main() {
     }))
     .filter((r) => r.name && r.brand && r.ingredients);
 
-  // Deduplicate by external_id within this batch
+  // Deduplicate by external_id AND by name+brand (to avoid hitting the unique constraint)
   const seen = new Set();
   const deduped = toInsert.filter((r) => {
-    if (seen.has(r.external_id)) return false;
+    const nameKey = `${r.name.toLowerCase().trim()}||${r.brand.toLowerCase().trim()}`;
+    if (seen.has(r.external_id) || seen.has(nameKey)) return false;
     seen.add(r.external_id);
+    seen.add(nameKey);
     return true;
   });
 
@@ -270,13 +272,20 @@ async function main() {
     const batch = deduped.slice(i, i + BATCH_SIZE);
     const { error } = await supabase
       .from("products")
-      .upsert(batch, { onConflict: "external_id" });
+      .insert(batch);
 
-    if (error) {
+    if (!error) {
+      inserted += batch.length;
+    } else if (error.message.includes("unique constraint") || error.message.includes("duplicate key")) {
+      // Retry individually — don't let one conflict kill the whole batch
+      for (const item of batch) {
+        const { error: itemErr } = await supabase.from("products").insert(item);
+        if (!itemErr) inserted++;
+        // else: silently skip unique constraint violations (product already exists)
+      }
+    } else {
       console.log(`  ✗ Batch ${Math.floor(i / BATCH_SIZE) + 1} error:`, error.message);
       failed += batch.length;
-    } else {
-      inserted += batch.length;
     }
 
     if (i % 1000 === 0 && i > 0) {

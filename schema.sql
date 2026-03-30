@@ -21,6 +21,10 @@ create index if not exists products_name_trgm on products using gin (name gin_tr
 create index if not exists products_brand_trgm on products using gin (brand gin_trgm_ops);
 create index if not exists products_ing_trgm on products using gin (ingredients gin_trgm_ops);
 
+-- Prevent duplicate products across sources (case-insensitive name+brand)
+create unique index if not exists products_name_brand_unique
+  on products (lower(trim(name)), lower(trim(brand)));
+
 -- User product log
 create table if not exists user_products (
   id         uuid primary key default gen_random_uuid(),
