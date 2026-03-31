@@ -39,7 +39,36 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const words = query.trim().toLowerCase().split(/\s+/).filter((w) => w.length > 1);
+  // Ingredient alias expansion — map shorthand/abbreviated terms to full ingredient names
+  const INGREDIENT_ALIASES: Record<string, string> = {
+    "ha": "hyaluronic acid",
+    "hyaluronic": "hyaluronic acid",
+    "ha5": "hyaluronic acid",
+    "vit c": "ascorbic acid",
+    "vitamin c": "ascorbic acid",
+    "retinol": "retinol",
+    "ret": "retinol",
+    "retinal": "retinal",
+    "niacinamide": "niacinamide",
+    "nia": "niacinamide",
+    "aha": "glycolic acid",
+    "bha": "salicylic acid",
+    "pha": "gluconolactone",
+    "ceramide": "ceramide",
+    "peptide": "peptide",
+    "bakuchiol": "bakuchiol",
+    "azelaic": "azelaic acid",
+    "squalane": "squalane",
+    "spf": "spf",
+  };
+  const queryLower = query.trim().toLowerCase();
+  const expandedIngredient = INGREDIENT_ALIASES[queryLower];
+
+  // For very short queries (≤3 chars like "HA", "BHA"), Postgres trigram index requires 3+ chars.
+  // Expand to full form so name search works (e.g. "ha" → "hyaluronic acid" finds "HA 5 Light").
+  const searchQuery = expandedIngredient && query.trim().length <= 3 ? expandedIngredient : query;
+
+  const words = searchQuery.trim().toLowerCase().split(/\s+/).filter((w) => w.length > 1);
   if (words.length === 0) return NextResponse.json({ products: [] });
 
   // Distinctive words (not common category terms) for a high-precision first pass
@@ -105,7 +134,52 @@ export async function GET(request: NextRequest) {
         const hasIngredients = p.ingredients && p.ingredients.length > 20 ? 2 : 0;
         return { ...p, _score: matchCount + exactBonus + hasIngredients };
       })
-      .sort((a, b) => b._score - a._score);
+      .sort((a, b) => {
+        if (b._score !== a._score) return b._score - a._score;
+        // Tiebreak: alphabetical by brand, then name
+        const brandCmp = (a.brand || "").localeCompare(b.brand || "");
+        if (brandCmp !== 0) return brandCmp;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+
+    // Also search by ingredient for known aliases (always) or when name/brand results are sparse
+    const ingredientQuery = expandedIngredient || (scored.length < 3 ? query.trim() : null);
+
+    if (ingredientQuery && (expandedIngredient || scored.length < 5)) {
+      const { data: ingredientMatches } = await supabase
+        .from("products")
+        .select("id, external_id, name, brand, ingredients, image")
+        .ilike("ingredients", `%${ingredientQuery}%`)
+        .not("ingredients", "is", null)
+        .limit(60);
+
+      const seenIds = new Set(merged.map((p) => p.id));
+      for (const p of (ingredientMatches || [])) {
+        if (!seenIds.has(p.id)) { seenIds.add(p.id); merged.push({ ...p, _score: 1, _ingredientMatch: true }); }
+      }
+
+      // Re-score with ingredient matches included
+      const rescored = merged.map((p) => {
+        if (p._ingredientMatch) return p;
+        const combined = normalize(`${p.brand} ${p.name}`);
+        const matchCount = words.filter((w) => combined.includes(w)).length;
+        const exactBonus = combined.includes(queryNorm) ? 5 : 0;
+        const hasIngredients = p.ingredients && p.ingredients.length > 20 ? 2 : 0;
+        return { ...p, _score: matchCount + exactBonus + hasIngredients };
+      }).sort((a, b) => b._score - a._score);
+
+      const filtered = category ? rescored.filter((p) => matchesCategory(p.name, category)) : rescored;
+      return NextResponse.json({
+        products: filtered.slice(0, 40).map((p) => ({
+          id: p.external_id || p.id,
+          name: p.name,
+          brand: p.brand,
+          ingredients: p.ingredients || null,
+          image: p.image || null,
+        })),
+        ingredientSearch: true,
+      });
+    }
 
     // Apply category filter
     const filtered = category

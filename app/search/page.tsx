@@ -124,7 +124,7 @@ function SearchPageInner() {
     }
   };
 
-  const visible = showAll ? results : results.slice(0, 6);
+  const visible = showAll ? results : results.slice(0, 12);
 
   return (
     <main className="min-h-screen" style={{ backgroundColor: "#F5F0EA" }}>
@@ -259,12 +259,12 @@ function SearchPageInner() {
               </div>
             ))}
 
-            {results.length > 6 && !showAll && (
+            {results.length > 12 && !showAll && (
               <button
                 onClick={() => setShowAll(true)}
                 className="w-full py-3 rounded-full text-sm font-medium text-stone-600 border border-stone-200 bg-white hover:bg-stone-50"
               >
-                Show {results.length - 6} more results
+                Show {results.length - 12} more results
               </button>
             )}
           </div>

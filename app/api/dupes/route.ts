@@ -1,22 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+// Common ingredient name synonyms — normalize to canonical form
+const INGREDIENT_SYNONYMS: Record<string, string> = {
+  "aqua": "water",
+  "purified water": "water",
+  "deionized water": "water",
+  "demineralized water": "water",
+  "eau": "water",
+  "white petrolatum": "petrolatum",
+  "yellow petrolatum": "petrolatum",
+  "soft white paraffin": "petrolatum",
+  "glycerol": "glycerin",
+  "propylene glycol usp": "propylene glycol",
+  "sd alcohol": "alcohol denat",
+  "alcohol denat.": "alcohol denat",
+  "tocopherol acetate": "tocopheryl acetate",
+  "retinol palmitate": "retinyl palmitate",
+};
+
+// Ingredients so common (appear in 50%+ of products) that they dilute similarity scores
+// when products share functional ingredients. Still used for pool building.
+const UBIQUITOUS = new Set([
+  "water", "glycerin", "aqua", "glycerol", "butylene glycol", "propylene glycol",
+  "phenoxyethanol", "ethylhexylglycerin", "carbomer", "xanthan gum",
+  "sodium hydroxide", "citric acid", "disodium edta", "tetrasodium edta",
+  "caprylyl glycol", "1,2-hexanediol", "pentylene glycol", "propanediol",
+  "sodium benzoate", "potassium sorbate", "chlorphenesin",
+  "parfum", "fragrance", "limonene", "linalool", "citral",
+]);
+
 function parseIngredients(text: string): Set<string> {
   return new Set(
     text
       .toLowerCase()
       .split(/,|;/)
-      .map((s) => s.trim().replace(/\*|\(.*?\)/g, "").trim())
-      .filter((s) => s.length > 2 && s.length < 60)
+      .map((s) => {
+        const clean = s.trim()
+          .replace(/\*|\(.*?\)/g, "")  // strip parentheticals like (Water) or (Shea)
+          .replace(/\s+/g, " ")         // collapse any double spaces left behind
+          .trim();
+        return INGREDIENT_SYNONYMS[clean] ?? clean;
+      })
+      .filter((s) => s.length > 2 && s.length < 80)
   );
 }
 
 function similarityScore(a: Set<string>, b: Set<string>): number {
   if (a.size === 0 || b.size === 0) return 0;
-  const intersection = [...a].filter((x) => b.has(x)).length;
-  const union = new Set([...a, ...b]).size;
+  // Score on functional ingredients only (exclude ubiquitous fillers)
+  const aFunc = new Set([...a].filter((x) => !UBIQUITOUS.has(x)));
+  const bFunc = new Set([...b].filter((x) => !UBIQUITOUS.has(x)));
+  // Fall back to full sets if functional sets are too small (e.g. very simple formulas)
+  const aSet = aFunc.size >= 3 ? aFunc : a;
+  const bSet = bFunc.size >= 3 ? bFunc : b;
+  const intersection = [...aSet].filter((x) => bSet.has(x)).length;
+  if (intersection === 0) return 0;
+  const union = new Set([...aSet, ...bSet]).size;
   const jaccard = intersection / union;
-  const overlap = intersection / Math.min(a.size, b.size);
+  const overlap = intersection / Math.min(aSet.size, bSet.size);
   return Math.round(((jaccard + overlap) / 2) * 100);
 }
 
@@ -146,6 +188,112 @@ async function findCandidates(query: string, category?: string): Promise<any[]> 
   return candidates;
 }
 
+// ── Multi-signal scoring (tagged products) ────────────────────────────────
+
+const TAG_WEIGHTS = {
+  function:  0.35,
+  archetype: 0.20,
+  families:  0.10,
+  intent:    0.15,
+  texture:   0.10,
+  format:    0.10,
+} as const;
+
+const MIN_TAG_SCORE = 0.60;
+const BRAND_PENALTY = 0.85;
+
+const FN_KEYS = [
+  "fn_humectant", "fn_barrier", "fn_soothing", "fn_antiaging",
+  "fn_brightening", "fn_exfoliation", "fn_oil_control", "fn_occlusion",
+] as const;
+
+const PRODUCT_TYPE_SIGNALS: [string, string[]][] = [
+  ["cleanser",  ["cleanser", "cleansing", "face wash", "foam wash", "foaming", "micellar", "makeup remover"]],
+  ["sunscreen", ["sunscreen", "sunblock", "spf ", "spf+", "sun cream", "broad spectrum"]],
+  ["haircare",  ["shampoo", "conditioner", "hair mask", "hair oil", "scalp", "leave-in"]],
+  ["primer",    [" primer", "pore primer", "makeup base"]],
+  ["lip",       ["lip balm", "lip mask", "lip treatment", "lip serum"]],
+  ["body",      ["body lotion", "body cream", "body crème", "body creme", "body oil", "body wash", "body butter", "hand cream", "foot cream"]],
+];
+
+const TAG_FORMAT_SIGNALS: [string, string[]][] = [
+  ["serum",   ["serum", "booster", "concentrate", "ampoule", "ampule", "drops"]],
+  ["cream",   ["cream", "moisturizer", "balm", "butter", "gel cream"]],
+  ["toner",   ["toner", "lotion", "softener"]],
+  ["essence", ["essence", "emulsion", "fluid"]],
+  ["oil",     ["face oil", "facial oil", "dry oil"]],
+  ["mask",    ["mask", "pack", "peel-off", "sleeping pack", "sleeping mask"]],
+  ["mist",    ["mist", "spray"]],
+];
+
+function normalizeBrandTag(brand: string): string {
+  return (brand || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function detectProductType(name: string): string {
+  const n = name.toLowerCase();
+  for (const [type, signals] of PRODUCT_TYPE_SIGNALS) {
+    if (signals.some((s) => n.includes(s))) return type;
+  }
+  return "skincare";
+}
+
+function detectTagFormat(name: string, stored: string | null): string {
+  if (stored) return stored;
+  const n = name.toLowerCase();
+  for (const [fmt, signals] of TAG_FORMAT_SIGNALS) {
+    if (signals.some((s) => n.includes(s))) return fmt;
+  }
+  return "serum";
+}
+
+function fnVector(tag: Record<string, any>): number[] {
+  return FN_KEYS.map((k) => parseFloat(tag[k]) || 0);
+}
+
+function cosine(a: number[], b: number[]): number {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i]; magA += a[i] * a[i]; magB += b[i] * b[i];
+  }
+  return magA === 0 || magB === 0 ? 0 : dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+
+function familiesJaccard(a: string | null, b: string | null): number {
+  const parse = (s: string | null) =>
+    new Set((s || "").split(",").map((x) => x.trim().toLowerCase()).filter(Boolean));
+  const setA = parse(a), setB = parse(b);
+  if (setA.size === 0 || setB.size === 0) return 0;
+  const inter = [...setA].filter((x) => setB.has(x)).length;
+  return inter / new Set([...setA, ...setB]).size;
+}
+
+function textureSim(a: Record<string, any>, b: Record<string, any>): number {
+  let s = 0;
+  if (a.texture_viscosity && b.texture_viscosity) s += a.texture_viscosity === b.texture_viscosity ? 0.6 : 0;
+  if (a.texture_finish    && b.texture_finish)    s += a.texture_finish    === b.texture_finish    ? 0.4 : 0;
+  return s;
+}
+
+function scoreTagPair(
+  tA: Record<string, any>, tB: Record<string, any>,
+  nameA: string,          nameB: string,
+): number {
+  const fmtA = detectTagFormat(nameA, tA.format);
+  const fmtB = detectTagFormat(nameB, tB.format);
+
+  let score =
+    cosine(fnVector(tA), fnVector(tB)) * TAG_WEIGHTS.function  +
+    (tA.archetype === tB.archetype ? 1 : 0)                    * TAG_WEIGHTS.archetype +
+    familiesJaccard(tA.ingredient_families, tB.ingredient_families) * TAG_WEIGHTS.families +
+    (tA.intent    === tB.intent    ? 1 : 0)                    * TAG_WEIGHTS.intent    +
+    textureSim(tA, tB)                                         * TAG_WEIGHTS.texture   +
+    (!fmtA || !fmtB ? 0.5 : fmtA === fmtB ? 1 : 0.5)         * TAG_WEIGHTS.format;
+
+  if (tA.archetype === "supporting_care" && tB.archetype === "supporting_care") score *= 0.8;
+  return score;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q");
@@ -208,6 +356,77 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ target: null, dupes: [], candidates: [] });
     }
 
+    // ── Multi-signal scoring (if target has product_tags) ─────────────────
+    const { data: targetTag } = await supabase
+      .from("product_tags")
+      .select("intent, archetype, format, texture_viscosity, texture_finish, ingredient_families, fn_humectant, fn_barrier, fn_soothing, fn_antiaging, fn_brightening, fn_exfoliation, fn_oil_control, fn_occlusion")
+      .eq("product_id", target.id)
+      .maybeSingle();
+
+    if (targetTag) {
+      const targetBrandNorm = normalizeBrandTag(target.brand || "");
+      const targetType      = detectProductType(target.name || "");
+
+      const { data: allTagged } = await supabase
+        .from("product_tags")
+        .select("product_id, intent, archetype, format, texture_viscosity, texture_finish, ingredient_families, fn_humectant, fn_barrier, fn_soothing, fn_antiaging, fn_brightening, fn_exfoliation, fn_oil_control, fn_occlusion, products(id, name, brand, image, external_id)")
+        .neq("product_id", target.id);
+
+      if (allTagged && allTagged.length > 0) {
+        // Score + filter
+        const scored = allTagged
+          .filter((t) => {
+            const p = t.products as any;
+            if (!p) return false;
+            if (normalizeBrandTag(p.brand) === targetBrandNorm) return false;
+            if (detectProductType(p.name) !== targetType) return false;
+            return true;
+          })
+          .map((t) => {
+            const p = t.products as any;
+            return {
+              id:    p.external_id || p.id,
+              name:  p.name,
+              brand: p.brand,
+              image: p.image || null,
+              ingredients: null as null,
+              score: scoreTagPair(targetTag, t, target.name, p.name),
+            };
+          })
+          .sort((a, b) => b.score - a.score);
+
+        // Brand-diversity penalty then re-sort
+        const brandSeen: Record<string, number> = {};
+        const diversified = scored
+          .map((d) => {
+            const bn = normalizeBrandTag(d.brand);
+            brandSeen[bn] = (brandSeen[bn] || 0) + 1;
+            return { ...d, score: d.score * Math.pow(BRAND_PENALTY, brandSeen[bn] - 1) };
+          })
+          .sort((a, b) => b.score - a.score);
+
+        const dupes = diversified
+          .filter((d) => d.score >= MIN_TAG_SCORE)
+          .slice(0, 8)
+          .map((d) => ({ ...d, score: Math.round(d.score * 100) }));
+
+        if (dupes.length >= 3) {
+          return NextResponse.json({
+            target: {
+              id:          target.external_id || target.id,
+              name:        target.name,
+              brand:       target.brand,
+              image:       target.image || null,
+              ingredients: target.ingredients,
+            },
+            dupes,
+            candidates: [],
+          });
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     // If target has no ingredients, return it with empty dupes and a helpful flag
     if (!isRealIngredientList(target.ingredients)) {
       return NextResponse.json({
@@ -239,15 +458,14 @@ export async function GET(request: NextRequest) {
     // Respect user-selected category over auto-detected
     const effectiveCategory = category || detectedCategory;
 
-    // Build comparison pool from ingredient overlap
-    // Use less-common ingredients (skip short/ubiquitous ones) for better targeting
+    // Build comparison pool using functional ingredients only (not ubiquitous fillers)
     const topIngredients = [...targetIngredients]
-      .filter((ing) => ing.length > 5 && !["water", "glycerin", "glycerol", "aqua"].includes(ing))
-      .slice(0, 8);
-    // Fall back to all ingredients > 4 chars if too few specific ones
+      .filter((ing) => ing.length > 5 && !UBIQUITOUS.has(ing))
+      .slice(0, 10);
+    // Fall back to all non-tiny ingredients if too few functional ones
     const poolIngredients = topIngredients.length >= 3
       ? topIngredients
-      : [...targetIngredients].filter((ing) => ing.length > 4).slice(0, 6);
+      : [...targetIngredients].filter((ing) => ing.length > 4).slice(0, 8);
 
     let pool: any[] = [];
     if (poolIngredients.length > 0) {
