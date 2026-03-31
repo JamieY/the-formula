@@ -1,3 +1,4 @@
+import React from "react";
 import NavBar from "@/app/components/NavBar";
 
 // ── Silhouette SVGs ────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ function ProductCard({
   name: string;
   rank?: number | null;
   archived?: boolean;
-  Silhouette: ({ color }: { color: string }) => JSX.Element;
+  Silhouette: React.ComponentType<{ color: string }>;
 }) {
   const color = archived ? ARCHIVED_COLOR : ACTIVE_COLOR;
   return (
