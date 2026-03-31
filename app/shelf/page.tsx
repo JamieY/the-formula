@@ -209,19 +209,17 @@ function ProductTile({
   rank,
   archived,
   Silhouette,
-  isWide,
 }: {
   brand: string;
   name: string;
   rank?: number | null;
   archived?: boolean;
   Silhouette: React.ComponentType<{ color: string }>;
-  isWide?: boolean;
 }) {
   const color = archived ? ARCHIVED_COLOR : ACTIVE_COLOR;
   return (
     <div className={`relative flex flex-col items-center gap-2 px-2 py-3 rounded-xl transition-all
-      ${archived ? "opacity-50" : "cursor-pointer hover:bg-white/60"}`}>
+      ${archived ? "opacity-50" : "cursor-pointer hover:bg-white/50"}`}>
       {rank && (
         <span
           className="absolute top-2 right-2 w-4 h-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
@@ -230,11 +228,12 @@ function ProductTile({
           {rank}
         </span>
       )}
-      <div className={`flex items-end justify-center ${isWide ? "w-14 h-9" : "w-10 h-14"}`}>
+      {/* Fixed-size container for ALL silhouette types — uniform tile height */}
+      <div className="w-14 h-14 flex items-center justify-center">
         <Silhouette color={color} />
       </div>
-      {/* Fixed-height text block so all tiles are the same height */}
-      <div className="text-center w-full h-[46px] flex flex-col justify-start">
+      {/* Fixed-height text block */}
+      <div className="text-center w-full h-[44px] flex flex-col justify-start">
         <p className="text-[10px] font-semibold uppercase tracking-wider leading-tight truncate text-stone-400">
           {brand}
         </p>
@@ -360,10 +359,10 @@ export default function ShelfMockup() {
         <div className="overflow-x-auto pb-6">
           <div className="flex gap-8 min-w-max items-start">
             {visibleColumns.map((col) => (
-              <div key={col.id} className="w-36 flex-shrink-0">
+              <div key={col.id} className="w-36 flex-shrink-0 bg-white/40 rounded-2xl px-1 pt-3 pb-4">
 
                 {/* Column label */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3 px-2">
                   <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
                     {col.label}
                   </p>
@@ -374,7 +373,7 @@ export default function ShelfMockup() {
 
                 {/* Empty column */}
                 {col.active.length === 0 && col.archived.length === 0 && (
-                  <div>
+                  <div className="px-1">
                     <EmptyColumn label={col.label} />
                     <p className="text-[10px] text-amber-500 text-center mt-2 px-1 leading-snug">
                       Gap in your routine
@@ -391,7 +390,6 @@ export default function ShelfMockup() {
                       name={p.name}
                       rank={p.rank}
                       Silhouette={col.Silhouette}
-                      isWide={col.isWide}
                     />
                   ))}
 
@@ -410,7 +408,6 @@ export default function ShelfMockup() {
                           name={p.name}
                           archived
                           Silhouette={col.Silhouette}
-                          isWide={col.isWide}
                         />
                       ))}
                     </>
@@ -421,10 +418,10 @@ export default function ShelfMockup() {
             ))}
 
             {/* Add column button */}
-            <div className="flex-shrink-0 relative">
+            <div className="flex-shrink-0 relative self-start mt-10">
               <button
                 onClick={() => setShowCustomize((v) => !v)}
-                className="mt-7 flex flex-col items-center gap-2 w-16 py-4 rounded-xl border border-dashed border-stone-200 text-stone-300 hover:border-stone-300 hover:text-stone-400 transition-all"
+                className="flex flex-col items-center gap-2 w-16 py-4 rounded-xl border border-dashed border-stone-200 text-stone-300 hover:border-stone-300 hover:text-stone-400 transition-all"
               >
                 <span className="text-xl leading-none">⊕</span>
                 <span className="text-[9px] uppercase tracking-wider leading-tight text-center">
