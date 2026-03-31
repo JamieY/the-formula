@@ -359,18 +359,31 @@ export async function GET(request: NextRequest) {
     // ── Multi-signal scoring (if target has product_tags) ─────────────────
     const { data: targetTag } = await supabase
       .from("product_tags")
-      .select("intent, archetype, format, texture_viscosity, texture_finish, ingredient_families, fn_humectant, fn_barrier, fn_soothing, fn_antiaging, fn_brightening, fn_exfoliation, fn_oil_control, fn_occlusion")
+      .select("intent, archetype, format, texture_viscosity, texture_finish, ingredient_families, fn_humectant, fn_barrier, fn_soothing, fn_antiaging, fn_brightening, fn_exfoliation, fn_oil_control, fn_occlusion, confidence_tier")
       .eq("product_id", target.id)
       .maybeSingle();
 
-    if (targetTag) {
+    // Low-confidence target tag → don't trust multi-signal; fall through to Jaccard
+    if (targetTag && targetTag.confidence_tier !== "low") {
       const targetBrandNorm = normalizeBrandTag(target.brand || "");
       const targetType      = detectProductType(target.name || "");
 
-      const { data: allTagged } = await supabase
+      // Prefer high/medium-confidence candidates; expand to full pool only if too few
+      const TAG_SELECT = "product_id, intent, archetype, format, texture_viscosity, texture_finish, ingredient_families, fn_humectant, fn_barrier, fn_soothing, fn_antiaging, fn_brightening, fn_exfoliation, fn_oil_control, fn_occlusion, products(id, name, brand, image, external_id)";
+      let { data: allTagged } = await supabase
         .from("product_tags")
-        .select("product_id, intent, archetype, format, texture_viscosity, texture_finish, ingredient_families, fn_humectant, fn_barrier, fn_soothing, fn_antiaging, fn_brightening, fn_exfoliation, fn_oil_control, fn_occlusion, products(id, name, brand, image, external_id)")
-        .neq("product_id", target.id);
+        .select(TAG_SELECT)
+        .neq("product_id", target.id)
+        .in("confidence_tier", ["high", "medium"]);
+
+      // Fall back to full pool if the filtered set is too small to score well
+      if (!allTagged || allTagged.length < 20) {
+        const { data: expanded } = await supabase
+          .from("product_tags")
+          .select(TAG_SELECT)
+          .neq("product_id", target.id);
+        allTagged = expanded;
+      }
 
       if (allTagged && allTagged.length > 0) {
         // Score + filter
