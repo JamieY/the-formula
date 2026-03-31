@@ -1,73 +1,126 @@
-import React from "react";
+"use client";
+import React, { useState } from "react";
 import NavBar from "@/app/components/NavBar";
 
-// ── Silhouette SVGs ────────────────────────────────────────────────────────
+// ── Palette ────────────────────────────────────────────────────────────────
+const ACTIVE_COLOR   = "#7B9E87";  // sage — calm, "this is working"
+const ARCHIVED_COLOR = "#C8C5BF";  // muted stone — past, receded
+
+// ── Silhouettes ────────────────────────────────────────────────────────────
 
 function TonerBottle({ color }: { color: string }) {
   return (
-    <svg viewBox="0 0 60 96" fill="none" className="w-full h-full">
-      <rect x="18" y="22" width="24" height="64" rx="8" fill={color} />
-      <rect x="22" y="12" width="16" height="14" rx="5" fill={color} opacity="0.7" />
-      <rect x="22" y="36" width="16" height="22" rx="3" fill="white" opacity="0.2" />
+    <svg viewBox="0 0 40 64" fill="none" className="w-full h-full">
+      <rect x="12" y="14" width="16" height="44" rx="6" fill={color} />
+      <rect x="15" y="8" width="10" height="10" rx="4" fill={color} opacity="0.6" />
+      <rect x="14" y="24" width="12" height="16" rx="2" fill="white" opacity="0.18" />
     </svg>
   );
 }
 
-function SerumBottle({ color }: { color: string }) {
+function SerumDropper({ color }: { color: string }) {
   return (
-    <svg viewBox="0 0 60 100" fill="none" className="w-full h-full">
-      <ellipse cx="30" cy="13" rx="7" ry="9" fill={color} opacity="0.65" />
-      <rect x="27" y="20" width="6" height="12" fill={color} opacity="0.65" />
-      <rect x="19" y="30" width="22" height="58" rx="9" fill={color} />
-      <rect x="23" y="44" width="14" height="20" rx="3" fill="white" opacity="0.2" />
+    <svg viewBox="0 0 40 68" fill="none" className="w-full h-full">
+      <ellipse cx="20" cy="9" rx="5" ry="7" fill={color} opacity="0.6" />
+      <rect x="18" y="14" width="4" height="9" fill={color} opacity="0.6" />
+      <rect x="12" y="21" width="16" height="40" rx="7" fill={color} />
+      <rect x="15" y="31" width="10" height="14" rx="2" fill="white" opacity="0.18" />
     </svg>
   );
 }
 
-function EyeCreamTube({ color }: { color: string }) {
+function EyeTube({ color }: { color: string }) {
   return (
-    <svg viewBox="0 0 60 80" fill="none" className="w-full h-full">
-      <rect x="14" y="16" width="32" height="48" rx="9" fill={color} />
-      <rect x="23" y="7" width="14" height="13" rx="5" fill={color} opacity="0.7" />
-      <rect x="18" y="29" width="24" height="18" rx="3" fill="white" opacity="0.2" />
-      <rect x="14" y="57" width="32" height="7" rx="4" fill={color} opacity="0.55" />
+    <svg viewBox="0 0 40 58" fill="none" className="w-full h-full">
+      <rect x="9" y="11" width="22" height="36" rx="7" fill={color} />
+      <rect x="15" y="5" width="10" height="10" rx="4" fill={color} opacity="0.6" />
+      <rect x="12" y="21" width="16" height="13" rx="2" fill="white" opacity="0.18" />
+      <rect x="9" y="41" width="22" height="6" rx="3" fill={color} opacity="0.5" />
     </svg>
   );
 }
 
 function MoisturizerJar({ color }: { color: string }) {
   return (
-    <svg viewBox="0 0 80 68" fill="none" className="w-full h-full">
-      <rect x="6" y="24" width="68" height="38" rx="10" fill={color} />
-      <rect x="4" y="13" width="72" height="16" rx="8" fill={color} opacity="0.7" />
-      <rect x="14" y="33" width="52" height="20" rx="4" fill="white" opacity="0.2" />
+    <svg viewBox="0 0 56 46" fill="none" className="w-full h-full">
+      <rect x="4" y="16" width="48" height="28" rx="8" fill={color} />
+      <rect x="2" y="8" width="52" height="12" rx="6" fill={color} opacity="0.6" />
+      <rect x="10" y="22" width="36" height="14" rx="3" fill="white" opacity="0.18" />
     </svg>
   );
 }
 
 function SpfTube({ color }: { color: string }) {
   return (
-    <svg viewBox="0 0 60 96" fill="none" className="w-full h-full">
-      <rect x="16" y="22" width="28" height="64" rx="9" fill={color} />
-      <rect x="25" y="10" width="10" height="16" rx="4" fill={color} opacity="0.7" />
-      <ellipse cx="30" cy="10" rx="9" ry="6" fill={color} opacity="0.6" />
-      <rect x="20" y="36" width="20" height="28" rx="3" fill="white" opacity="0.2" />
+    <svg viewBox="0 0 40 64" fill="none" className="w-full h-full">
+      <rect x="11" y="16" width="18" height="44" rx="7" fill={color} />
+      <rect x="17" y="7" width="6" height="13" rx="3" fill={color} opacity="0.6" />
+      <ellipse cx="20" cy="7" rx="7" ry="5" fill={color} opacity="0.55" />
+      <rect x="14" y="26" width="12" height="20" rx="2" fill="white" opacity="0.18" />
     </svg>
   );
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────
+function PumpBottle({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 40 72" fill="none" className="w-full h-full">
+      <rect x="10" y="20" width="20" height="48" rx="7" fill={color} />
+      <rect x="17" y="8" width="6" height="16" rx="3" fill={color} opacity="0.6" />
+      <rect x="17" y="6" width="14" height="5" rx="2.5" fill={color} opacity="0.55" />
+      <rect x="13" y="32" width="14" height="20" rx="2" fill="white" opacity="0.18" />
+    </svg>
+  );
+}
 
-const ACTIVE_COLOR   = "#C4956A";   // warm tan — active products
-const ARCHIVED_COLOR = "#C5C3BE";   // stone grey — archived products
+function OilDropper({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 40 72" fill="none" className="w-full h-full">
+      <ellipse cx="20" cy="8" rx="4" ry="6" fill={color} opacity="0.6" />
+      <rect x="18.5" y="13" width="3" height="8" fill={color} opacity="0.55" />
+      <rect x="13" y="19" width="14" height="46" rx="8" fill={color} />
+      <rect x="16" y="30" width="8" height="16" rx="2" fill="white" opacity="0.18" />
+    </svg>
+  );
+}
 
-const COLUMNS = [
+function MaskPot({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 56 42" fill="none" className="w-full h-full">
+      <rect x="3" y="14" width="50" height="26" rx="9" fill={color} />
+      <rect x="1" y="7" width="54" height="11" rx="5.5" fill={color} opacity="0.6" />
+      <rect x="9" y="19" width="38" height="12" rx="3" fill="white" opacity="0.18" />
+    </svg>
+  );
+}
+
+// ── Column definitions ────────────────────────────────────────────────────
+
+type Product = { brand: string; name: string; rank?: number | null };
+
+type ColumnDef = {
+  id: string;
+  label: string;
+  Silhouette: React.ComponentType<{ color: string }>;
+  isWide?: boolean;
+  optional?: boolean;
+  active: Product[];
+  archived: Product[];
+};
+
+const ALL_COLUMNS: ColumnDef[] = [
+  {
+    id: "cleanser",
+    label: "Cleanser",
+    Silhouette: PumpBottle,
+    active: [],
+    archived: [],
+  },
   {
     id: "toner",
-    label: "Toner / Essence",
+    label: "Toner",
     Silhouette: TonerBottle,
     active: [
-      { brand: "Hada Labo", name: "Gokujyun Premium Lotion", rank: null },
+      { brand: "Hada Labo", name: "Gokujyun Premium", rank: null },
     ],
     archived: [
       { brand: "Pyunkang Yul", name: "Essence Toner" },
@@ -76,29 +129,39 @@ const COLUMNS = [
   {
     id: "serum",
     label: "Serum",
-    Silhouette: SerumBottle,
+    Silhouette: SerumDropper,
     active: [
-      { brand: "Drunk Elephant", name: "C-Firma Fresh Day Serum", rank: 1 },
-      { brand: "The Ordinary", name: "Niacinamide 10% + Zinc 1%", rank: 2 },
+      { brand: "Drunk Elephant", name: "C-Firma Serum", rank: 1 },
+      { brand: "The Ordinary", name: "Niacinamide 10%", rank: 2 },
     ],
     archived: [
-      { brand: "Paula's Choice", name: "2% BHA Liquid Exfoliant" },
-      { brand: "Sunday Riley", name: "Good Genes Lactic Acid" },
+      { brand: "Paula's Choice", name: "2% BHA Exfoliant" },
+      { brand: "Sunday Riley", name: "Good Genes" },
     ],
   },
   {
     id: "eye",
     label: "Eye Cream",
-    Silhouette: EyeCreamTube,
+    Silhouette: EyeTube,
+    optional: true,
     active: [
-      { brand: "Kiehl's", name: "Creamy Eye Treatment with Avocado", rank: null },
+      { brand: "Kiehl's", name: "Creamy Eye Treatment", rank: null },
     ],
+    archived: [],
+  },
+  {
+    id: "oil",
+    label: "Face Oil",
+    Silhouette: OilDropper,
+    optional: true,
+    active: [],
     archived: [],
   },
   {
     id: "moisturizer",
     label: "Moisturizer",
     Silhouette: MoisturizerJar,
+    isWide: true,
     active: [
       { brand: "La Roche-Posay", name: "Toleriane Double Repair", rank: 1 },
     ],
@@ -112,50 +175,71 @@ const COLUMNS = [
     label: "SPF",
     Silhouette: SpfTube,
     active: [
-      { brand: "EltaMD", name: "UV Clear Broad-Spectrum SPF 46", rank: null },
+      { brand: "EltaMD", name: "UV Clear SPF 46", rank: null },
     ],
+    archived: [],
+  },
+  {
+    id: "mask",
+    label: "Mask",
+    Silhouette: MaskPot,
+    isWide: true,
+    optional: true,
+    active: [],
+    archived: [],
+  },
+  {
+    id: "treatment",
+    label: "Treatment",
+    Silhouette: SerumDropper,
+    optional: true,
+    active: [],
     archived: [],
   },
 ];
 
-// ── Product card ──────────────────────────────────────────────────────────
+// Default visible: non-optional columns only
+const DEFAULT_VISIBLE = ALL_COLUMNS.filter((c) => !c.optional).map((c) => c.id);
 
-function ProductCard({
+// ── Product tile ───────────────────────────────────────────────────────────
+
+function ProductTile({
   brand,
   name,
   rank,
   archived,
   Silhouette,
+  isWide,
 }: {
   brand: string;
   name: string;
   rank?: number | null;
   archived?: boolean;
   Silhouette: React.ComponentType<{ color: string }>;
+  isWide?: boolean;
 }) {
   const color = archived ? ARCHIVED_COLOR : ACTIVE_COLOR;
   return (
-    <div
-      className={`relative rounded-2xl p-4 flex flex-col items-center gap-3 shadow-sm border transition-all ${
-        archived
-          ? "bg-stone-50 border-stone-100 opacity-60"
-          : "bg-white border-stone-100 hover:border-stone-300 hover:shadow-md cursor-pointer"
-      }`}
-    >
+    <div className={`relative flex flex-col items-center gap-2 px-2 py-3 rounded-xl transition-all
+      ${archived ? "opacity-50" : "cursor-pointer hover:bg-white/60"}`}>
       {rank && (
         <span
-          className="absolute top-3 right-3 w-5 h-5 rounded-full text-white text-xs font-bold flex items-center justify-center"
+          className="absolute top-2 right-2 w-4 h-4 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
           style={{ backgroundColor: "#8B4513" }}
         >
           {rank}
         </span>
       )}
-      <div className="w-14 h-16 flex items-center justify-center">
+      <div className={`flex items-end justify-center ${isWide ? "w-14 h-9" : "w-10 h-14"}`}>
         <Silhouette color={color} />
       </div>
-      <div className="text-center w-full">
-        <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 truncate">{brand}</p>
-        <p className={`text-xs mt-0.5 leading-snug line-clamp-2 ${archived ? "text-stone-400" : "text-stone-700 font-medium"}`}>
+      {/* Fixed-height text block so all tiles are the same height */}
+      <div className="text-center w-full h-[46px] flex flex-col justify-start">
+        <p className="text-[10px] font-semibold uppercase tracking-wider leading-tight truncate text-stone-400">
+          {brand}
+        </p>
+        <p className={`text-xs leading-tight line-clamp-2 mt-0.5
+          ${archived ? "text-stone-400" : "text-stone-600"}`}>
           {name}
         </p>
       </div>
@@ -163,13 +247,68 @@ function ProductCard({
   );
 }
 
-// ── Empty column slot ────────────────────────────────────────────────────
+// ── Empty column ──────────────────────────────────────────────────────────
 
-function EmptySlot({ label }: { label: string }) {
+function EmptyColumn({ label }: { label: string }) {
   return (
-    <div className="rounded-2xl border-2 border-dashed border-stone-200 p-4 flex flex-col items-center justify-center gap-2 min-h-[130px] cursor-pointer hover:border-stone-400 hover:bg-stone-50 transition-all">
-      <span className="text-2xl text-stone-300">+</span>
-      <p className="text-xs text-stone-400 text-center">Add a {label.toLowerCase()}</p>
+    <div className="flex flex-col items-center gap-3 px-2 py-6 rounded-xl border border-dashed border-stone-200 cursor-pointer hover:border-stone-300 hover:bg-stone-50/50 transition-all">
+      <div className="w-8 h-12 rounded-lg border-2 border-dashed border-stone-200 flex items-center justify-center">
+        <span className="text-stone-300 text-lg leading-none">+</span>
+      </div>
+      <p className="text-[10px] text-stone-400 text-center uppercase tracking-wider">
+        Add {label}
+      </p>
+    </div>
+  );
+}
+
+// ── Customize panel ────────────────────────────────────────────────────────
+
+function CustomizePanel({
+  visibleIds,
+  onToggle,
+  onClose,
+}: {
+  visibleIds: string[];
+  onToggle: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="absolute right-0 top-10 z-20 w-56 bg-white rounded-2xl shadow-lg border border-stone-100 p-4">
+      <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-3">
+        Routine Steps
+      </p>
+      <div className="flex flex-col gap-2">
+        {ALL_COLUMNS.map((col) => {
+          const isOn = visibleIds.includes(col.id);
+          return (
+            <button
+              key={col.id}
+              onClick={() => onToggle(col.id)}
+              className="flex items-center justify-between w-full text-left group"
+            >
+              <span className={`text-sm ${isOn ? "text-stone-700 font-medium" : "text-stone-400"}`}>
+                {col.label}
+                {col.optional && (
+                  <span className="ml-1.5 text-[10px] text-stone-300 font-normal">optional</span>
+                )}
+              </span>
+              <span
+                className={`w-8 h-4 rounded-full flex items-center transition-colors ${isOn ? "justify-end" : "justify-start"}`}
+                style={{ backgroundColor: isOn ? "#7B9E87" : "#E5E1DA" }}
+              >
+                <span className="w-3 h-3 rounded-full bg-white mx-0.5 shadow-sm" />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <button
+        onClick={onClose}
+        className="mt-4 w-full text-center text-xs text-stone-400 hover:text-stone-600 transition-colors"
+      >
+        Done
+      </button>
     </div>
   );
 }
@@ -177,126 +316,148 @@ function EmptySlot({ label }: { label: string }) {
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export default function ShelfMockup() {
+  const [visibleIds, setVisibleIds] = useState<string[]>(DEFAULT_VISIBLE);
+  const [showCustomize, setShowCustomize] = useState(false);
+
+  function toggleColumn(id: string) {
+    setVisibleIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  const visibleColumns = ALL_COLUMNS.filter((c) => visibleIds.includes(c.id));
+
   return (
     <main className="min-h-screen" style={{ backgroundColor: "#F5F0EA" }}>
       <NavBar />
 
-      <div className="px-6 py-10 max-w-screen-xl mx-auto">
+      <div className="px-8 py-10 max-w-screen-xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-start justify-between mb-10">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "#8B4513" }}>
+            <p className="text-xs font-semibold uppercase tracking-widest mb-1.5" style={{ color: "#7B9E87" }}>
               My Shelf
             </p>
             <h1 className="text-3xl font-serif font-semibold" style={{ color: "#2C2C2C" }}>
               Your routine, in order
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              className="px-5 py-2.5 rounded-full text-sm font-medium border border-stone-300 text-stone-600 hover:bg-stone-100 transition-colors"
-            >
+          <div className="flex items-center gap-3 mt-1">
+            <button className="px-5 py-2 rounded-full text-sm font-medium border border-stone-300 text-stone-500 hover:bg-white transition-colors">
               Analyze My Formula
             </button>
             <button
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-medium text-white shadow-sm"
+              className="flex items-center gap-1.5 px-5 py-2 rounded-full text-sm font-medium text-white"
               style={{ backgroundColor: "#8B4513" }}
             >
-              <span className="text-base leading-none">+</span>
-              Add Product
+              <span className="text-base leading-none">+</span> Add
             </button>
           </div>
         </div>
 
-        {/* Shelf — horizontal scroll */}
-        <div className="overflow-x-auto pb-4">
-          <div className="flex gap-5 min-w-max">
-            {COLUMNS.map((col) => (
-              <div key={col.id} className="w-44 flex-shrink-0">
+        {/* Shelf */}
+        <div className="overflow-x-auto pb-6">
+          <div className="flex gap-8 min-w-max items-start">
+            {visibleColumns.map((col) => (
+              <div key={col.id} className="w-36 flex-shrink-0">
 
-                {/* Column header */}
-                <div className="flex items-center justify-between mb-3 px-1">
+                {/* Column label */}
+                <div className="flex items-center justify-between mb-4">
                   <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">
                     {col.label}
                   </p>
-                  <button className="text-stone-300 hover:text-stone-500 text-lg leading-none">+</button>
+                  <button className="text-stone-300 hover:text-stone-500 text-base leading-none transition-colors">
+                    +
+                  </button>
                 </div>
 
+                {/* Empty column */}
+                {col.active.length === 0 && col.archived.length === 0 && (
+                  <div>
+                    <EmptyColumn label={col.label} />
+                    <p className="text-[10px] text-amber-500 text-center mt-2 px-1 leading-snug">
+                      Gap in your routine
+                    </p>
+                  </div>
+                )}
+
                 {/* Active products */}
-                <div className="flex flex-col gap-3">
-                  {col.active.length === 0 && col.archived.length === 0 && (
-                    <EmptySlot label={col.label} />
-                  )}
+                <div className="flex flex-col gap-1">
                   {col.active.map((p) => (
-                    <ProductCard
+                    <ProductTile
                       key={p.name}
                       brand={p.brand}
                       name={p.name}
                       rank={p.rank}
                       Silhouette={col.Silhouette}
+                      isWide={col.isWide}
                     />
                   ))}
 
-                  {/* Archived divider + products */}
+                  {/* Archived */}
                   {col.archived.length > 0 && (
                     <>
-                      <div className="flex items-center gap-2 px-1 pt-2">
+                      <div className="flex items-center gap-2 my-2 px-2">
                         <div className="flex-1 h-px bg-stone-200" />
-                        <p className="text-xs text-stone-300 whitespace-nowrap">past</p>
+                        <p className="text-[10px] text-stone-300 uppercase tracking-wider">past</p>
                         <div className="flex-1 h-px bg-stone-200" />
                       </div>
                       {col.archived.map((p) => (
-                        <ProductCard
+                        <ProductTile
                           key={p.name}
                           brand={p.brand}
                           name={p.name}
                           archived
                           Silhouette={col.Silhouette}
+                          isWide={col.isWide}
                         />
                       ))}
                     </>
                   )}
-
-                  {/* Add slot at bottom if column has active products */}
-                  {col.active.length > 0 && (
-                    <EmptySlot label={col.label} />
-                  )}
                 </div>
+
               </div>
             ))}
 
-            {/* Cleanser column — intentionally empty to show gap */}
-            <div className="w-44 flex-shrink-0">
-              <div className="flex items-center justify-between mb-3 px-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-stone-400">Cleanser</p>
-                <button className="text-stone-300 hover:text-stone-500 text-lg leading-none">+</button>
-              </div>
-              <EmptySlot label="cleanser" />
-              <p className="text-xs text-amber-600 text-center mt-2 px-1 leading-snug">
-                No cleanser in your routine
-              </p>
+            {/* Add column button */}
+            <div className="flex-shrink-0 relative">
+              <button
+                onClick={() => setShowCustomize((v) => !v)}
+                className="mt-7 flex flex-col items-center gap-2 w-16 py-4 rounded-xl border border-dashed border-stone-200 text-stone-300 hover:border-stone-300 hover:text-stone-400 transition-all"
+              >
+                <span className="text-xl leading-none">⊕</span>
+                <span className="text-[9px] uppercase tracking-wider leading-tight text-center">
+                  Edit<br />steps
+                </span>
+              </button>
+              {showCustomize && (
+                <CustomizePanel
+                  visibleIds={visibleIds}
+                  onToggle={toggleColumn}
+                  onClose={() => setShowCustomize(false)}
+                />
+              )}
             </div>
-
           </div>
         </div>
 
-        {/* Analyze My Formula banner */}
-        <div
-          className="mt-10 rounded-2xl px-8 py-6 flex items-center justify-between"
-          style={{ backgroundColor: "#EDE8E0" }}
-        >
+        {/* Thin divider */}
+        <div className="border-t border-stone-200 mt-4 mb-8" />
+
+        {/* Analyze CTA — quiet, not loud */}
+        <div className="flex items-center justify-between">
           <div>
-            <p className="font-semibold text-stone-700 mb-1">Ready to analyze your formula?</p>
-            <p className="text-sm text-stone-500">
-              See what&apos;s redundant, what conflicts with your skin profile, and what your routine is missing.
+            <p className="font-medium text-stone-700 text-sm mb-0.5">Ready to analyze your formula?</p>
+            <p className="text-xs text-stone-400">
+              See what&apos;s redundant, what conflicts with your skin profile, and what&apos;s missing.
             </p>
           </div>
           <button
-            className="flex-shrink-0 ml-8 px-6 py-2.5 rounded-full text-sm font-medium text-white shadow-sm"
-            style={{ backgroundColor: "#8B4513" }}
+            className="flex-shrink-0 ml-8 px-5 py-2 rounded-full text-sm font-medium text-white"
+            style={{ backgroundColor: "#7B9E87" }}
           >
-            Analyze My Formula →
+            Analyze →
           </button>
         </div>
 
