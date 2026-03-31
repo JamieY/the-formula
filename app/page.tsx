@@ -19,7 +19,7 @@ export default function Home() {
           Stop repurchasing products<br />that don&apos;t work for you.
         </h1>
         <p className="text-lg text-stone-500 mb-10 max-w-xl leading-relaxed">
-          Search any skincare product to decode its ingredients, then track what works and what doesn&apos;t — all in one place.
+          Log your shelf, see the patterns you&apos;ve been missing, and build a routine that&apos;s actually working — not just growing.
         </p>
 
         <HomeSearch />
@@ -89,8 +89,8 @@ export default function Home() {
               },
               {
                 step: "03",
-                title: "Track what works",
-                desc: "Add products to your personal log. Mark them Love It, Still Using, Want to Try, or Abandoned.",
+                title: "Understand your routine",
+                desc: "Log your shelf in routine order, rank products head-to-head within each category, and get on-demand analysis of what's redundant and what your skin is missing.",
               },
             ].map((item) => (
               <div key={item.step} className="flex flex-col items-start">
@@ -113,10 +113,10 @@ export default function Home() {
               Your Personal Log
             </p>
             <h2 className="text-3xl font-serif font-semibold mb-4" style={{ color: "#2C2C2C" }}>
-              Everything you&apos;ve tried, in one place
+              Your shelf, finally making sense.
             </h2>
             <p className="text-stone-500 mb-6 leading-relaxed">
-              Never buy the same disappointing product twice. Your log remembers every product you&apos;ve tried — what you loved, what broke you out, and what you want to test next.
+              Most people own three versions of the same moisturizer without realizing it. The Formula organizes your products in the order you apply them, spots the redundancies, and shows you what your routine is actually missing.
             </p>
             <Link
               href="/signup"
@@ -174,7 +174,7 @@ export default function Home() {
               {
                 icon: "📋",
                 title: "Smart Product Log",
-                desc: "Track every product you've tried with status labels. Get warned before repurchasing something that didn't work for you.",
+                desc: "Log your entire shelf in routine order. Rank products head-to-head. Get on-demand analysis of what's working, what's redundant, and what gaps your skin needs filled.",
                 href: "/log",
                 cta: "View my log",
               },
@@ -196,10 +196,10 @@ export default function Home() {
       <section className="px-8 py-16">
         <div className="max-w-2xl mx-auto text-center rounded-3xl px-10 py-14 shadow-sm" style={{ backgroundColor: "#8B4513" }}>
           <h2 className="text-3xl font-serif font-semibold text-white mb-3">
-            Ready to know your skin?
+            Ready to understand your routine?
           </h2>
           <p className="text-white/70 mb-8 leading-relaxed">
-            Join thousands of people who track their skincare and never waste money on the wrong products.
+            Stop buying the same thing twice. Build a shelf that actually works for your skin.
           </p>
           <Link
             href="/signup"
