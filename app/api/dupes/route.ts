@@ -93,7 +93,7 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
 
 // Exclusion keywords — if product contains these, exclude from a category
 const CATEGORY_EXCLUDES: Record<string, string[]> = {
-  moisturizer: ["cleanser", "wash", "scrub", "sunscreen", "spf", "serum", "toner", "eye", "mask", "peel"],
+  moisturizer: ["cleanser", "wash", "scrub", "sunscreen", "spf", "serum", "toner", "eye", "mask", "peel", "retinol", "retinoid", "retinaldehyde", "retinal", "retinoic", "tretinoin", "exfoliant", "aha", "bha", "salicylic", "glycolic"],
   cleanser: ["moisturizer", "lotion", "cream spf", "sunscreen", "serum", "toner"],
   mask: ["hair", "shampoo", "conditioner", "body wash", "hand"],
 };
@@ -371,7 +371,7 @@ export async function GET(request: NextRequest) {
       if (kws.some((kw) => targetNameLowerMS.includes(kw))) { targetCategory = cat; break; }
     }
     // Treatment exclusion keywords — products containing these are treatments, not moisturizers/serums
-    const TREATMENT_SIGNALS = ["retinol", "retinoid", "tretinoin", "aha", "bha", "salicylic", "glycolic", "lactic acid", "exfoliant", "exfoliating", "peel", "spot treatment"];
+    const TREATMENT_SIGNALS = ["retinol", "retinoid", "retinaldehyde", "retinal", "retinoic", "tretinoin", "aha", "bha", "salicylic", "glycolic", "lactic acid", "exfoliant", "exfoliating", "peel", "spot treatment"];
     const targetIsTreatment = TREATMENT_SIGNALS.some((s) => targetNameLowerMS.includes(s));
 
     if (targetTag && targetTag.confidence_tier !== "low") {
