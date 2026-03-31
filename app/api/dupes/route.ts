@@ -208,13 +208,21 @@ const FN_KEYS = [
 ] as const;
 
 const PRODUCT_TYPE_SIGNALS: [string, string[]][] = [
-  ["cleanser",  ["cleanser", "cleansing", "face wash", "foam wash", "foaming", "micellar", "makeup remover"]],
+  ["cleanser",  ["cleanser", "cleansing", "face wash", "foam wash", "foaming", "micellar", "makeup remover",
+                 "nettoyant", "gel nettoyant", "gel lavant", "huile lavante", "lavant", "syndet", "surgras",
+                 "cleansing bar", "cleansing gel", "cleansing oil", " wash", "facial wash"]],
   ["sunscreen", ["sunscreen", "sunblock", "spf ", "spf+", "sun cream", "broad spectrum"]],
   ["haircare",  ["shampoo", "conditioner", "hair mask", "hair oil", "scalp", "leave-in"]],
-  ["makeup",    ["mascara", "foundation", "concealer", "blush", "bronzer", "highlighter", "eyeshadow", "eyeliner", "lipstick", "lip gloss", "lip liner", "setting powder", "setting spray", "bb cream", "cc cream", "tinted moisturizer", "color correcting"]],
+  ["makeup",    ["mascara", "foundation", "concealer", "blush", "bronzer", "highlighter", "eyeshadow", "eyeliner",
+                 "lipstick", "lip gloss", "lip liner", "setting powder", "setting spray", "bb cream", "cc cream",
+                 "tinted moisturizer", "color correcting", "le teint", "teint ", " teint", "palette "]],
+  ["supplement", ["supplement", " capsule", " tablet", " vitamin ", "softgel", "gummy", "probiotic"]],
   ["primer",    [" primer", "pore primer", "makeup base"]],
-  ["lip",       ["lip balm", "lip mask", "lip treatment", "lip serum"]],
-  ["body",      ["body lotion", "body cream", "body crème", "body creme", "body oil", "body wash", "body butter", "hand cream", "foot cream"]],
+  ["lip",       ["lip balm", "lip mask", "lip treatment", "lip serum", "lip oil", "lip butter", "lip tint",
+                 "levres", "lèvres", "lipbalm"]],
+  ["body",      ["body lotion", "body cream", "body crème", "body creme", "body oil", "body wash", "body butter",
+                 "hand cream", "foot cream", "shower gel", "gel douche", "lait corps", " corps", "body milk",
+                 "body balm", "body fluid"]],
 ];
 
 const TAG_FORMAT_SIGNALS: [string, string[]][] = [
@@ -381,24 +389,27 @@ export async function GET(request: NextRequest) {
 
       // Prefer high/medium-confidence candidates; expand to full pool only if too few
       const TAG_SELECT = "product_id, intent, archetype, format, texture_viscosity, texture_finish, ingredient_families, fn_humectant, fn_barrier, fn_soothing, fn_antiaging, fn_brightening, fn_exfoliation, fn_oil_control, fn_occlusion, products(id, name, brand, image, external_id)";
-      // Filter by same archetype+intent in DB to stay well under the 1000-row default limit
-      let { data: allTagged } = await supabase
+      // Supabase caps at 1000 rows per request — paginate to get up to 2000
+      const baseQuery = () => supabase
         .from("product_tags")
         .select(TAG_SELECT)
         .neq("product_id", target.id)
         .eq("archetype", targetTag.archetype)
-        .eq("intent", targetTag.intent)
-        .limit(2000);
+        .eq("intent", targetTag.intent);
+
+      const [p1, p2] = await Promise.all([
+        baseQuery().range(0, 999),
+        baseQuery().range(1000, 1999),
+      ]);
+      let allTagged: any[] | null = [...(p1.data || []), ...(p2.data || [])];
 
       // Fall back to full high/medium pool if too few same-archetype results
       if (!allTagged || allTagged.length < 20) {
-        const { data: expanded } = await supabase
-          .from("product_tags")
-          .select(TAG_SELECT)
-          .neq("product_id", target.id)
-          .in("confidence_tier", ["high", "medium"])
-          .limit(2000);
-        allTagged = expanded;
+        const [fp1, fp2] = await Promise.all([
+          supabase.from("product_tags").select(TAG_SELECT).neq("product_id", target.id).in("confidence_tier", ["high", "medium"]).range(0, 999),
+          supabase.from("product_tags").select(TAG_SELECT).neq("product_id", target.id).in("confidence_tier", ["high", "medium"]).range(1000, 1999),
+        ]);
+        allTagged = [...(fp1.data || []), ...(fp2.data || [])];
       }
 
       if (allTagged && allTagged.length > 0) {
