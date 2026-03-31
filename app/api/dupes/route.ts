@@ -211,6 +211,7 @@ const PRODUCT_TYPE_SIGNALS: [string, string[]][] = [
   ["cleanser",  ["cleanser", "cleansing", "face wash", "foam wash", "foaming", "micellar", "makeup remover"]],
   ["sunscreen", ["sunscreen", "sunblock", "spf ", "spf+", "sun cream", "broad spectrum"]],
   ["haircare",  ["shampoo", "conditioner", "hair mask", "hair oil", "scalp", "leave-in"]],
+  ["makeup",    ["mascara", "foundation", "concealer", "blush", "bronzer", "highlighter", "eyeshadow", "eyeliner", "lipstick", "lip gloss", "lip liner", "setting powder", "setting spray", "bb cream", "cc cream", "tinted moisturizer", "color correcting"]],
   ["primer",    [" primer", "pore primer", "makeup base"]],
   ["lip",       ["lip balm", "lip mask", "lip treatment", "lip serum"]],
   ["body",      ["body lotion", "body cream", "body crème", "body creme", "body oil", "body wash", "body butter", "hand cream", "foot cream"]],
