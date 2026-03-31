@@ -381,18 +381,23 @@ export async function GET(request: NextRequest) {
 
       // Prefer high/medium-confidence candidates; expand to full pool only if too few
       const TAG_SELECT = "product_id, intent, archetype, format, texture_viscosity, texture_finish, ingredient_families, fn_humectant, fn_barrier, fn_soothing, fn_antiaging, fn_brightening, fn_exfoliation, fn_oil_control, fn_occlusion, products(id, name, brand, image, external_id)";
+      // Filter by same archetype+intent in DB to stay well under the 1000-row default limit
       let { data: allTagged } = await supabase
         .from("product_tags")
         .select(TAG_SELECT)
         .neq("product_id", target.id)
-        .in("confidence_tier", ["high", "medium"]);
+        .eq("archetype", targetTag.archetype)
+        .eq("intent", targetTag.intent)
+        .limit(2000);
 
-      // Fall back to full pool if the filtered set is too small to score well
+      // Fall back to full high/medium pool if too few same-archetype results
       if (!allTagged || allTagged.length < 20) {
         const { data: expanded } = await supabase
           .from("product_tags")
           .select(TAG_SELECT)
-          .neq("product_id", target.id);
+          .neq("product_id", target.id)
+          .in("confidence_tier", ["high", "medium"])
+          .limit(2000);
         allTagged = expanded;
       }
 
