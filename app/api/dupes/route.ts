@@ -364,6 +364,16 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     // Low-confidence target tag → don't trust multi-signal; fall through to Jaccard
+    // Auto-detect target's skincare category for like-for-like filtering
+    const targetNameLowerMS = (target.name || "").toLowerCase();
+    let targetCategory: string | null = null;
+    for (const [cat, kws] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (kws.some((kw) => targetNameLowerMS.includes(kw))) { targetCategory = cat; break; }
+    }
+    // Treatment exclusion keywords — products containing these are treatments, not moisturizers/serums
+    const TREATMENT_SIGNALS = ["retinol", "retinoid", "tretinoin", "aha", "bha", "salicylic", "glycolic", "lactic acid", "exfoliant", "exfoliating", "peel", "spot treatment"];
+    const targetIsTreatment = TREATMENT_SIGNALS.some((s) => targetNameLowerMS.includes(s));
+
     if (targetTag && targetTag.confidence_tier !== "low") {
       const targetBrandNorm = normalizeBrandTag(target.brand || "");
       const targetType      = detectProductType(target.name || "");
@@ -393,6 +403,29 @@ export async function GET(request: NextRequest) {
             if (!p) return false;
             if (normalizeBrandTag(p.brand) === targetBrandNorm) return false;
             if (detectProductType(p.name) !== targetType) return false;
+
+            const candNameLower = (p.name || "").toLowerCase();
+            const candIsTreatment = TREATMENT_SIGNALS.some((s) => candNameLower.includes(s));
+
+            // Don't cross the treatment/non-treatment boundary
+            if (targetIsTreatment !== candIsTreatment) return false;
+
+            // If target has a detected category, exclude candidates from clearly incompatible categories
+            if (targetCategory) {
+              let candCategory: string | null = null;
+              for (const [cat, kws] of Object.entries(CATEGORY_KEYWORDS)) {
+                if (kws.some((kw) => candNameLower.includes(kw))) { candCategory = cat; break; }
+              }
+              // Exclude if candidate is in a clearly different primary category
+              const INCOMPATIBLE: Record<string, string[]> = {
+                moisturizer: ["cleanser", "toner", "sunscreen"],
+                cleanser:    ["moisturizer", "toner", "sunscreen", "serum"],
+                sunscreen:   ["cleanser", "toner"],
+                toner:       ["cleanser", "moisturizer", "sunscreen"],
+              };
+              if (candCategory && INCOMPATIBLE[targetCategory]?.includes(candCategory)) return false;
+            }
+
             return true;
           })
           .map((t) => {
