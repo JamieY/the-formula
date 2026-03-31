@@ -29,6 +29,17 @@ const CATEGORIES = [
   { key: "treatment", label: "Treatment" },
 ];
 
+const CATEGORY_EXAMPLES: Record<string, string[]> = {
+  "":           ["La Mer Moisturizing Cream", "CeraVe Moisturizing Cream", "Tatcha The Water Cream", "Neutrogena Hydro Boost"],
+  moisturizer:  ["La Mer Moisturizing Cream", "CeraVe Moisturizing Cream", "Tatcha The Water Cream", "Neutrogena Hydro Boost"],
+  cleanser:     ["CeraVe Foaming Facial Cleanser", "La Roche-Posay Toleriane Hydrating Cleanser", "Cetaphil Gentle Skin Cleanser", "Drunk Elephant Beste No. 9"],
+  serum:        ["Drunk Elephant C-Firma Serum", "The Ordinary Niacinamide 10%", "Paula's Choice 2% BHA", "Sunday Riley Good Genes"],
+  sunscreen:    ["EltaMD UV Clear SPF 46", "Supergoop Unseen Sunscreen", "La Roche-Posay Anthelios", "Neutrogena Ultra Sheer"],
+  toner:        ["Hada Labo Gokujyun Premium", "Pyunkang Yul Essence Toner", "Paula's Choice Skin Perfecting Toner", "Some By Mi AHA BHA PHA"],
+  "eye cream":  ["Kiehl's Creamy Eye Treatment", "Neutrogena Rapid Wrinkle Eye Cream", "Ole Henriksen Banana Bright Eye", "CeraVe Eye Repair Cream"],
+  treatment:    ["The Ordinary Retinol 0.5%", "Paula's Choice 1% Retinol", "Differin Gel", "SkinCeuticals CE Ferulic"],
+};
+
 function DupeDetectorInner() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
@@ -41,6 +52,9 @@ function DupeDetectorInner() {
   const [dupes, setDupes] = useState<DupeProduct[]>([]);
   const [noIngredients, setNoIngredients] = useState(false);
   const [candidates, setCandidates] = useState<Product[]>([]);
+  const [suggestions, setSuggestions] = useState<{ name: string; brand: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
   const lastSearchedRef = useRef("");
 
@@ -64,6 +78,28 @@ function DupeDetectorInner() {
     }
   }, [initialId, initialQuery]);
   useEffect(() => { if (searched) search(undefined, category); }, [category]);
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+    if (val.trim().length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
+    suggestTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/products/suggest?q=${encodeURIComponent(val)}`);
+        const data = await res.json();
+        setSuggestions(data);
+        setShowSuggestions(data.length > 0);
+      } catch { setSuggestions([]); }
+    }, 200);
+  };
+
+  const pickSuggestion = (s: { name: string; brand: string }) => {
+    const q = `${s.brand} ${s.name}`;
+    setQuery(q);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    search(q, category);
+  };
 
   const search = async (overrideQuery?: string, overrideCategory?: string) => {
     const q = overrideQuery ?? query;
@@ -157,12 +193,28 @@ function DupeDetectorInner() {
                 <input
                   type="text"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") search(); }}
+                  onChange={(e) => handleQueryChange(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { setShowSuggestions(false); search(); } }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  onFocus={() => { if (suggestions.length > 0) setShowSuggestions(true); }}
                   placeholder="e.g. Neutrogena Hydro Boost..."
                   className="flex-1 bg-transparent outline-none text-stone-700 placeholder-stone-400"
                 />
               </div>
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-lg border border-stone-100 overflow-hidden z-20">
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onMouseDown={() => pickSuggestion(s)}
+                      className="w-full text-left px-5 py-3 hover:bg-stone-50 transition-colors border-b border-stone-50 last:border-0"
+                    >
+                      <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 mr-2">{s.brand}</span>
+                      <span className="text-sm text-stone-700">{s.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               onClick={() => search()}
@@ -328,15 +380,10 @@ function DupeDetectorInner() {
           <div className="text-center py-8">
             <p className="text-stone-400 text-sm mb-4">Try searching for:</p>
             <div className="flex flex-wrap justify-center gap-2">
-              {[
-                "La Mer Moisturizing Cream",
-                "CeraVe Moisturizing Cream",
-                "Tatcha The Water Cream",
-                "Neutrogena Hydro Boost",
-              ].map((example) => (
+              {(CATEGORY_EXAMPLES[category] ?? CATEGORY_EXAMPLES[""]).map((example) => (
                 <button
                   key={example}
-                  onClick={() => { setQuery(example); }}
+                  onClick={() => { setQuery(example); search(example, category); }}
                   className="px-4 py-2 rounded-full text-sm bg-white border border-stone-200 text-stone-600 hover:bg-stone-50"
                 >
                   {example}
