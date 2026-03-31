@@ -335,7 +335,7 @@ function DupeDetectorInner() {
             </div>
 
             <p className="text-xs text-stone-400 text-center mb-6">
-              Match % = ingredient overlap (Jaccard similarity)
+              Match % = formula similarity score (ingredients, function, texture, and format)
             </p>
 
             <div className="flex flex-col gap-4">
